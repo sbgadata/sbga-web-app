@@ -11,7 +11,7 @@
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) {
-      window.location.href = "login.html";
+      window.location.href = "index.html";
     }
   </script>
 
@@ -43,7 +43,7 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         localStorage.removeItem("usuario");
-                        window.location.href = "login.html";
+                        window.location.href = "index.html";
                     }
                 });
             }

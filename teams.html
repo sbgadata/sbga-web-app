@@ -29,7 +29,7 @@
 
         <script>
             const usuario = JSON.parse(localStorage.getItem("usuario"));
-            if (!usuario) window.location.href = "login.html";
+            if (!usuario) window.location.href = "index.html";
 
             fetch('aside.html')
                 .then(res => res.text())
@@ -57,7 +57,7 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         localStorage.removeItem("usuario");
-                        window.location.href = "login.html";
+                        window.location.href = "index.html";
                     }
                 });
             }
