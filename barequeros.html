@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Barequeros | SBGA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body class="bg-gray-100">
+    <div class="flex min-h-screen">
+        <script>
+            const usuario = JSON.parse(localStorage.getItem("usuario"));
+            if (!usuario) window.location.href = "login.html";
+        </script>
+        <!-- Loader -->
+        <div id="loader" class="absolute inset-0 flex justify-center items-center bg-white bg-opacity-60 z-10">
+            <div class="flex flex-col items-center gap-2">
+                <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+                <p class="text-sm text-gray-600">Cargando barequeros...</p>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div id="sidebar-container"></div>
+
+        <script>
+            
+
+            fetch('aside.html')
+                .then(res => res.text())
+                .then(data => {
+                    document.getElementById('sidebar-container').innerHTML = data;
+                    // ✅ Los elementos ya existen, ahora sí se puede insertar el usuario
+                    document.getElementById("userName").innerText = usuario.nombre;
+                    document.getElementById("userRol").innerText = usuario.rol;
+                })
+                .catch(err => console.error('Error cargando el aside:', err));
+        </script>
+
+        <!-- Contenido principal -->
+        <div class="p-8 w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-2xl font-bold text-gray-800">Lista de Barequeros</h1>
+                <button onclick="window.location.href='new-barequero.html'"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
+                    + Nuevo barequero
+                </button>
+            </div>
+
+            <!-- Filtro global -->
+            <div class="relative mb-6">
+                <input type="text" id="filtroGlobal" placeholder="Buscar en todos los campos..."
+                    class="w-full border px-4 py-2 rounded shadow-sm" />
+                <span class="absolute right-4 top-2.5 text-gray-400 pointer-events-none">🔍</span>
+            </div>
+
+            <!-- Tabla -->
+            <div class="bg-white shadow rounded-lg overflow-x-auto">
+                <table class="min-w-full text-sm text-left text-gray-700">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-3">Nombre</th>
+                            <th class="px-4 py-3">Apellido</th>
+                            <th class="px-4 py-3">Cédula</th>
+                            <th class="px-4 py-3">Género</th>
+                            <th class="px-4 py-3">Bancarizado</th>
+                            <th class="px-4 py-3">Fecha de incorporación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaBarequeros">
+                        <!-- Cargado por JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function cargarBarequeros() {
+            document.getElementById("loader").style.display = "flex";
+
+            try {
+                const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=obtener_barequeros");
+                const data = await res.json();
+
+                if (data.success) {
+                    renderizarTabla(data.barequeros);
+                    document.getElementById("filtroGlobal").addEventListener("input", () => {
+                        const valor = document.getElementById("filtroGlobal").value.toLowerCase();
+                        const filtrados = data.barequeros.filter(b =>
+                            Object.values(b).some(val => String(val).toLowerCase().includes(valor))
+                        );
+                        renderizarTabla(filtrados);
+                    });
+                } else {
+                    throw new Error("Error al obtener barequeros");
+                }
+            } catch (err) {
+                Swal.fire("Error", err.message, "error");
+            } finally {
+                document.getElementById("loader").style.display = "none";
+            }
+        }
+
+        function renderizarTabla(barequeros) {
+            const tbody = document.getElementById("tablaBarequeros");
+            tbody.innerHTML = "";
+
+            barequeros.forEach(b => {
+                const fila = `<tr class="border-t">
+                    <td class="px-4 py-2">${b.nombre || ''}</td>
+                    <td class="px-4 py-2">${b.apellido || ''}</td>
+                    <td class="px-4 py-2">${b.cedula || ''}</td>
+                    <td class="px-4 py-2">${b.genero || ''}</td>
+                    <td class="px-4 py-2">${b.bancarizado || ''}</td>
+                    <td class="px-4 py-2">${b.fecha_incorporacion || ''}</td>
+                </tr>`;
+                tbody.innerHTML += fila;
+            });
+        }
+
+        // 🚀 Iniciar carga
+        cargarBarequeros();
+    </script>
+</body>
+
+</html>

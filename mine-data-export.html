@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Añadir datos de Exportación | SBGA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body class="bg-gray-100">
+    <script>
+        const usuario = JSON.parse(localStorage.getItem("usuario"));
+        if (!usuario) {
+            window.location.href = "login.html";
+        }
+    </script>
+
+    <div class="flex min-h-screen">
+        <!-- index.html -->
+        <div id="sidebar-container"></div>
+
+        <script>
+            fetch('aside.html')
+                .then(res => res.text())
+                .then(data => {
+                    document.getElementById('sidebar-container').innerHTML = data;
+                })
+                .catch(err => console.error('Error cargando el aside:', err));
+        </script>
+
+        <script>
+            function logoutConfirm() {
+                Swal.fire({
+                    title: '¿Cerrar sesión?',
+                    text: "Tu sesión se cerrará.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#aaa',
+                    confirmButtonText: 'Sí, salir',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        localStorage.removeItem("usuario");
+                        window.location.href = "login.html";
+                    }
+                });
+            }
+        </script>
+
+        <main class="flex-1 p-8 bg-gray-50">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">Datos Operativos</h1>
+                <p class="text-sm text-gray-500">Complete los datos de exportación</p>
+            </div>
+
+            <form id="form-operativo" class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-lg shadow">
+
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700">Mina *</label>
+                    <select id="mina_id" required
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                        <option value="">Buscando minas disponibles...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Fecha de exportación *</label>
+                    <input type="date" id="fecha_exportacion" required
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Exportación Paso 1</label>
+                    <input type="number" id="paso1_exportacion"
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Exportación Paso 2</label>
+                    <input type="number" id="paso2_exportacion"
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Refinador</label>
+                    <input type="text" id="refinador"
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Comprador</label>
+                    <input type="text" id="comprador"
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700">Comentario exportación</label>
+                    <textarea id="comentario_exportacion" rows="3"
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div class="md:col-span-2 flex justify-end gap-3 mt-4">
+                    <button type="reset"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Cancelar</button>
+                    <button type="submit"
+                        class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar</button>
+                </div>
+            </form>
+
+        </main>
+
+        <script>
+    async function cargarMinas() {
+        try {
+            const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=obtener_minas");
+            const result = await res.json();
+
+            if (!result.success) throw new Error(result.error || "Error al obtener minas");
+
+            const select = document.getElementById("mina_id");
+            select.innerHTML = '<option value="">Seleccione una mina</option>';
+
+            result.minas.forEach(mina => {
+                const option = document.createElement("option");
+                option.value = mina.id;
+                option.textContent = mina.nombre;
+                select.appendChild(option);
+            });
+        } catch (err) {
+            console.error("Error al cargar minas:", err);
+            Swal.fire("Error", "No se pudieron cargar las minas", "error");
+        }
+    }
+
+    // Llamar al cargar la página
+    cargarMinas();
+</script>
+
+
+        <script>
+            document.getElementById("form-operativo").addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                const data = {
+                    action: "guardar_operativo",
+                    mina_id: document.getElementById("mina_id").value,
+                    fecha_exportacion: document.getElementById("fecha_exportacion").value,
+                    comentario_exportacion: document.getElementById("comentario_exportacion").value,
+                    paso1_exportacion: parseFloat(document.getElementById("paso1_exportacion").value) || null,
+                    paso2_exportacion: parseFloat(document.getElementById("paso2_exportacion").value) || null,
+                    refinador: document.getElementById("refinador").value,
+                    comprador: document.getElementById("comprador").value,
+                };
+
+                try {
+                    Swal.fire({ title: "Guardando...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+                    const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec", {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await res.json();
+                    Swal.close();
+
+                    if (result.success) {
+                        Swal.fire("Éxito", "Datos operativos guardados correctamente", "success");
+                        document.getElementById("form-operativo").reset();
+                    } else {
+                        Swal.fire("Error", result.error || "Error al guardar", "error");
+                    }
+                } catch (err) {
+                    Swal.close();
+                    Swal.fire("Error", "No se pudo conectar con el servidor", "error");
+                }
+            });
+        </script>
+    </div>
+
+    <script>
+        document.getElementById("userName").innerText = usuario.nombre;
+        document.getElementById("userRol").innerText = usuario.rol;
+    </script>
+</body>
+
+</html>

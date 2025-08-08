@@ -1,0 +1,124 @@
+<!-- Font Awesome y Montserrat -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    integrity="sha512-K8as+Tx0QPKqEGCMz3U5bHnXYf6B6n8+bxztfE6YVmhVugvpyZwJfdNfNwEj59qRtjXLbf+W1VZWZDZFC6mV1g=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+    * {
+        font-family: 'Montserrat', sans-serif;
+    }
+
+    details summary {
+        list-style: none;
+    }
+
+    /* Animación desplegable */
+    details[open]>ul {
+        animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Negrita cuando está abierto */
+    details[open]>summary {
+        font-weight: 700;
+        color: #991b1b;
+    }
+</style>
+
+<aside class="w-64 bg-white border-r shadow-lg flex flex-col justify-between font-[Montserrat]" id="sidebar"
+    style="height: 100%;">
+    <div>
+        <!-- Encabezado -->
+        <div class="p-6 border-b border-gray-200">
+            <a href="/dashboard.html">
+                <img src="assets/images/logo.png" alt="Logo SBGA" class="h-12 object-contain" />
+            </a>
+            <div class="mt-4 ml-2">
+                <p id="userName" class="text-gray-800 font-semibold"></p>
+                <p id="userRol" class="text-gray-500 text-sm"></p>
+            </div>
+        </div>
+
+
+
+
+        <!-- Navegación -->
+        <nav class="p-4 text-sm text-gray-800">
+            <ul class="space-y-4">
+                <li class="text-xs uppercase tracking-wider font-bold text-gray-400">Principal</li>
+
+                <!-- Proyectos -->
+                <li>
+                    <details class="group">
+                        <summary
+                            class="flex items-center gap-2 cursor-pointer font-medium text-gray-700 hover:text-red-600 transition-all">
+                            <i class="fas fa-folder-open text-red-500"></i> Proyectos
+                        </summary>
+                        <ul class="ml-6 mt-2 space-y-1 text-gray-600">
+                            <li><a href="projects.html" class="block pl-2 py-1 rounded hover:bg-red-50">• Lista</a></li>
+                            <li><a href="executions.html" class="block pl-2 py-1 rounded hover:bg-red-50">•
+                                    Ejecuciones</a></li>
+                            <li><a href="contributions.html" class="block pl-2 py-1 rounded hover:bg-red-50">•
+                                    Contribuciones</a></li>
+                        </ul>
+                    </details>
+                </li>
+
+                <!-- Minas -->
+                <li>
+                    <details class="group">
+                        <summary
+                            class="flex items-center gap-2 cursor-pointer font-medium text-gray-700 hover:text-red-600 transition-all">
+                            <i class="fas fa-mountain text-red-500"></i> Minas
+                        </summary>
+                        <ul class="ml-6 mt-2 space-y-1 text-gray-600">
+                            <li><a href="mines.html" class="block pl-2 py-1 rounded hover:bg-red-50">• Lista</a></li>
+                            <li><a href="mine-data-export.html" class="block pl-2 py-1 rounded hover:bg-red-50">• Datos
+                                    de Exportación</a></li>
+                        </ul>
+                    </details>
+                </li>
+
+                <!-- SBG -->
+                <li>
+                    <details class="group">
+                        <summary
+                            class="flex items-center gap-2 cursor-pointer font-medium text-gray-700 hover:text-red-600 transition-all">
+                            <i class="fas fa-users-cog text-red-500"></i> SBG
+                        </summary>
+                        <ul class="ml-6 mt-2 space-y-1 text-gray-600">
+                            <li><a href="new-mission.html" class="block pl-2 py-1 rounded hover:bg-red-50">•
+                                    Misiones</a></li>
+                            <li><a href="teams.html" class="block pl-2 py-1 rounded hover:bg-red-50">• Equipos</a></li>
+                            <li><a href="barequeros.html" class="block pl-2 py-1 rounded hover:bg-red-50">•
+                                    Barequeros</a></li>
+                            <li><a href="members.html" class="block pl-2 py-1 rounded hover:bg-red-50">• Miembros</a>
+                            </li>
+                        </ul>
+                    </details>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Botón Cerrar Sesión -->
+    <div class="p-4 border-t border-gray-200">
+        <button onclick="logoutConfirm()"
+            class="w-full flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-2 px-4 rounded-lg transition-all">
+            <i class="fas fa-sign-out-alt"></i>
+            Cerrar sesión
+        </button>
+    </div>
+</aside>

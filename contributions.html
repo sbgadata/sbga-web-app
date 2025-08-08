@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lista de Contribuciones | SBGA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body class="bg-gray-100">
+  <div class="flex min-h-screen">
+
+    <!-- Loader -->
+    <div id="loader" class="absolute inset-0 flex justify-center items-center bg-white bg-opacity-60 z-10">
+      <div class="flex flex-col items-center gap-2">
+        <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+          viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <p class="text-sm text-gray-600">Cargando Contribuciones...</p>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Contenido -->
+    <main class="p-8 w-full">
+      <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold text-gray-800">Lista de Contribuciones</h1>
+        <button onclick="window.location.href='new-contribution.html'"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
+          + Nueva Contribución
+        </button>
+      </div>
+
+      <!-- Filtro -->
+      <div class="relative mb-6">
+        <input type="text" id="filtroGlobal" placeholder="Buscar en todos los campos..."
+          class="w-full border px-4 py-2 rounded shadow-sm" />
+        <span class="absolute right-4 top-2.5 text-gray-400 pointer-events-none">🔍</span>
+      </div>
+
+      <!-- Tabla -->
+      <div class="bg-white shadow rounded-lg overflow-x-auto">
+        <table class="min-w-full text-sm text-left text-gray-700">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="px-4 py-3">Miembro</th>
+              <th class="px-4 py-3">Fecha</th>
+              <th class="px-4 py-3">Valor (USD)</th>
+              <th class="px-4 py-3">Descripción</th>
+            </tr>
+          </thead>
+          <tbody id="tablaContribuciones">
+            <!-- Datos cargados por JS -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Script principal -->
+  <script>
+    // Validar sesión antes de todo
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
+    if (!usuario) window.location.href = "login.html";
+
+    // Cargar el aside y luego mostrar usuario
+    fetch('aside.html')
+      .then(res => res.text())
+      .then(data => {
+        document.getElementById('sidebar-container').innerHTML = data;
+
+        const nombre = document.getElementById("userName");
+        const rol = document.getElementById("userRol");
+        if (nombre && rol && usuario) {
+          nombre.textContent = usuario.nombre || '';
+          rol.textContent = usuario.rol || '';
+        }
+      })
+      .catch(err => console.error('Error cargando el aside:', err));
+
+    // Formato de fecha
+    function formatearFecha(fechaISO) {
+      const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
+      const fecha = new Date(fechaISO);
+      return fecha.toLocaleDateString('es-ES', opciones);
+    }
+
+    // Cargar contribuciones
+    async function cargarContribuciones() {
+      const loader = document.getElementById("loader");
+      loader.style.display = "flex";
+
+      try {
+        const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=obtener_contribuciones");
+        const data = await res.json();
+
+        if (!data.success) throw new Error("No se pudieron cargar las contribuciones");
+
+        renderizarTabla(data.contribuciones);
+
+        document.getElementById("filtroGlobal").addEventListener("input", () => {
+          const valor = document.getElementById("filtroGlobal").value.toLowerCase();
+          const filtradas = data.contribuciones.filter(c =>
+            Object.values(c).some(v => String(v).toLowerCase().includes(valor))
+          );
+          renderizarTabla(filtradas);
+        });
+
+      } catch (err) {
+        Swal.fire("Error", err.message, "error");
+      } finally {
+        loader.style.display = "none";
+      }
+    }
+
+    // Dibujar tabla
+    function renderizarTabla(contribuciones) {
+      const tbody = document.getElementById("tablaContribuciones");
+      tbody.innerHTML = "";
+
+      contribuciones.forEach(c => {
+        const fila = `<tr class="border-t">
+          <td class="px-4 py-2">${c.miembro_id || ''}</td>
+          <td class="px-4 py-2">${formatearFecha(c.fecha)}</td>
+          <td class="px-4 py-2">$${Number(c.valor_monetario).toLocaleString("es-CO")}</td>
+          <td class="px-4 py-2">${c.descripcion || ''}</td>
+        </tr>`;
+        tbody.innerHTML += fila;
+      });
+    }
+
+    // Ejecutar carga
+    cargarContribuciones();
+  </script>
+</body>
+
+</html>
