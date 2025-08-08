@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Miembros | SBGA</title>
+  <title>Nuevo miembro | SBGA</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
@@ -16,109 +16,174 @@
   </script>
 
   <div class="flex min-h-screen">
-    <!-- index.html -->
+    <!-- Sidebar -->
     <div id="sidebar-container"></div>
-
     <script>
       fetch('aside.html')
         .then(res => res.text())
-        .then(data => {
-          document.getElementById('sidebar-container').innerHTML = data;
-        })
+        .then(data => document.getElementById('sidebar-container').innerHTML = data)
         .catch(err => console.error('Error cargando el aside:', err));
     </script>
 
-    <!-- Contenido principal -->
     <main class="flex-1 p-8 bg-gray-50">
-      <div class="flex items-center justify-between mb-6">
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Nuevo miembro</h1>
+        <p class="text-sm text-gray-500">Completa todos los campos para registrar un nuevo miembro</p>
+      </div>
+
+      <form id="form-miembro" class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-lg shadow">
+
         <div>
-          <h1 class="text-2xl font-bold text-gray-800">Lista de Miembros</h1>
-          <p class="text-sm text-gray-500">Consulta los miembros registrados</p>
+          <label class="block mb-1 font-medium text-gray-700">Nombre empresa *</label>
+          <input type="text" id="nombre_empresa" required
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
         </div>
-        <a href="nuevo_miembro.html"
-          class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm font-medium">
-          + Nuevo miembro
-        </a>
-      </div>
 
-      <!-- Buscador -->
-      <div class="mb-4">
-        <input type="text" id="buscador" placeholder="Buscar en todos los campos..."
-          class="w-full px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
-      </div>
+        <div>
+          <label class="block mb-1 font-medium text-gray-700">Nombre contacto *</label>
+          <input type="text" id="nombre_contacto" required
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+        </div>
 
-      <!-- Tabla -->
-      <div id="loader" class="text-center text-gray-600">Cargando...</div>
+        <div>
+          <label class="block mb-1 font-medium text-gray-700">Apellido contacto *</label>
+          <input type="text" id="apellido_contacto" required
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+        </div>
 
-      <div id="tabla-container" class="overflow-x-auto bg-white rounded-lg shadow hidden">
-        <table class="min-w-full text-sm text-gray-800">
-          <thead class="bg-gray-100 text-xs uppercase text-gray-600">
-            <tr>
-              <th class="px-4 py-3 text-left">EMPRESA</th>
-              <th class="px-4 py-3 text-left">NOMBRE</th>
-              <th class="px-4 py-3 text-left">APELLIDO</th>
-              <th class="px-4 py-3 text-left">TIPO</th>
-              <th class="px-4 py-3 text-left">CELULAR</th>
-              <th class="px-4 py-3 text-left">EMAIL</th>
-              <th class="px-4 py-3 text-left">SECTOR</th>
-              <th class="px-4 py-3 text-left">DIRECCIÓN</th>
-              <th class="px-4 py-3 text-left">TEL. EMPRESA</th>
-              <th class="px-4 py-3 text-left">PAÍS</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-miembros" class="divide-y divide-gray-200"></tbody>
-        </table>
-      </div>
+        <div>
+          <label class="block mb-1 font-medium text-gray-700">Tipo de miembro *</label>
+          <input type="text" id="tipo_miembro" required placeholder="Aliado, Asociado, etc."
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div>
+          <label class="block mb-1 font-medium text-gray-700">Celular *</label>
+          <input type="tel" id="celular" required
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div>
+          <label class="block mb-1 font-medium text-gray-700">Email *</label>
+          <input type="email" id="email" required
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div>
+          <label class="block mb-1 font-medium text-gray-700">Sector *</label>
+          <input type="text" id="sector" required
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div>
+          <label class="block mb-1 font-medium text-gray-700">Dirección empresa *</label>
+          <input type="text" id="direccion_empresa" required
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div>
+          <label class="block mb-1 font-medium text-gray-700">Teléfono empresa *</label>
+          <input type="tel" id="telefono_empresa" required
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div>
+          <label class="block mb-1 font-medium text-gray-700">País *</label>
+          <select id="pais" required
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500">
+            <option value="">Cargando países...</option>
+          </select>
+        </div>
+
+        <div class="md:col-span-2 flex justify-end gap-3 mt-4">
+          <button type="reset" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Cancelar</button>
+          <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar</button>
+        </div>
+      </form>
     </main>
   </div>
 
   <script>
-    let datosMiembros = [];
+    document.getElementById("userName").innerText = usuario.nombre;
+    document.getElementById("userRol").innerText = usuario.rol;
+  </script>
 
-    async function cargarMiembros() {
+  <script>
+    async function cargarPaises() {
+      const select = document.getElementById("pais");
       try {
-        const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=obtener_miembros");
-        datosMiembros = await res.json();
-
-        document.getElementById("loader").classList.add("hidden");
-        document.getElementById("tabla-container").classList.remove("hidden");
-        mostrarMiembros(datosMiembros);
-      } catch (e) {
-        Swal.fire("Error", "No se pudieron cargar los miembros", "error");
+        const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=obtener_paises");
+        const data = await res.json();
+        if (data.success) {
+          select.innerHTML = '<option value="">Seleccione un país</option>';
+          data.paises.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.nombre;
+            opt.textContent = p.nombre;
+            select.appendChild(opt);
+          });
+        } else {
+          select.innerHTML = '<option value="">Error cargando países</option>';
+        }
+      } catch {
+        select.innerHTML = '<option value="">Error de conexión</option>';
       }
     }
 
-    function mostrarMiembros(lista) {
-      const tbody = document.getElementById("tabla-miembros");
-      tbody.innerHTML = "";
+    document.addEventListener("DOMContentLoaded", () => {
+      cargarPaises();
 
-      lista.forEach(m => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="px-4 py-2">${m.nombre_empresa}</td>
-          <td class="px-4 py-2">${m.nombre_contacto}</td>
-          <td class="px-4 py-2">${m.apellido_contacto}</td>
-          <td class="px-4 py-2">${m.tipo_miembro}</td>
-          <td class="px-4 py-2">${m.celular}</td>
-          <td class="px-4 py-2">${m.email}</td>
-          <td class="px-4 py-2">${m.sector}</td>
-          <td class="px-4 py-2">${m.direccion_empresa}</td>
-          <td class="px-4 py-2">${m.telefono_empresa}</td>
-          <td class="px-4 py-2">${m.pais}</td>
-        `;
-        tbody.appendChild(tr);
+      document.getElementById("form-miembro").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const data = {
+          action: "guardar_miembro",
+          nombre_empresa: document.getElementById("nombre_empresa").value,
+          nombre_contacto: document.getElementById("nombre_contacto").value,
+          apellido_contacto: document.getElementById("apellido_contacto").value,
+          tipo_miembro: document.getElementById("tipo_miembro").value,
+          celular: document.getElementById("celular").value,
+          email: document.getElementById("email").value,
+          sector: document.getElementById("sector").value,
+          direccion_empresa: document.getElementById("direccion_empresa").value,
+          telefono_empresa: document.getElementById("telefono_empresa").value,
+          pais: document.getElementById("pais").value
+        };
+
+        try {
+          Swal.fire({
+            title: "Guardando...",
+            text: "Por favor espera un momento",
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+          });
+
+          const res = await fetch('https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8'
+            },
+            redirect: 'follow'
+          });
+
+          const result = await res.json();
+          Swal.close();
+
+          if (result.success) {
+            Swal.fire("Éxito", result.mensaje, "success").then(() => {
+              window.location.href = "members.html";
+            });
+          } else {
+            throw new Error(result.error || "Error desconocido");
+          }
+        } catch (err) {
+          Swal.close();
+          Swal.fire("Error", "No se pudo conectar con el servidor", "error");
+        }
       });
-    }
 
-    document.getElementById("buscador").addEventListener("input", function () {
-      const filtro = this.value.toLowerCase();
-      const filtrados = datosMiembros.filter(m =>
-        Object.values(m).some(v => String(v).toLowerCase().includes(filtro))
-      );
-      mostrarMiembros(filtrados);
     });
-
-    cargarMiembros();
   </script>
 </body>
 
