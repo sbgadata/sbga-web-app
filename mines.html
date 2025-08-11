@@ -7,6 +7,12 @@
   <title>Lista de Minas | SBGA</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    .btn-page[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-100">
@@ -17,10 +23,9 @@
 
   <div class="flex min-h-screen">
     <!-- Loader -->
-    <div id="loader" class="absolute inset-0 flex justify-center items-center bg-white bg-opacity-60 z-10">
+    <div id="loader" class="fixed inset-0 flex justify-center items-center bg-white bg-opacity-70 z-20">
       <div class="flex flex-col items-center gap-2">
-        <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
-          viewBox="0 0 24 24">
+        <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
         </svg>
@@ -30,28 +35,41 @@
 
     <!-- Sidebar -->
     <div id="sidebar-container"></div>
-
     <script>
       fetch("aside.html")
         .then((res) => res.text())
         .then((data) => {
           document.getElementById("sidebar-container").innerHTML = data;
-          document.getElementById("userName").innerText = usuario.nombre;
-          document.getElementById("userRol").innerText = usuario.rol;
+          const nameEl = document.getElementById("userName");
+          const rolEl = document.getElementById("userRol");
+          if (nameEl) nameEl.innerText = usuario?.nombre || '';
+          if (rolEl) rolEl.innerText = usuario?.rol || '';
         })
         .catch((err) => console.error("Error cargando el aside:", err));
     </script>
 
     <!-- Contenido -->
-    <div class="p-8 w-full">
-      <div class="flex justify-between items-center mb-4">
+    <div class="p-6 md:p-8 w-full">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <h1 class="text-2xl font-bold text-gray-800">Minas</h1>
-      </div>
 
-      <div class="relative mb-6">
-        <input type="text" id="filtroGlobal" placeholder="Buscar en todos los campos..."
-          class="w-full border px-4 py-2 rounded shadow-sm" />
-        <span class="absolute right-4 top-2.5 text-gray-400 pointer-events-none">🔍</span>
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div class="relative">
+            <input type="text" id="filtroGlobal" placeholder="Buscar en todos los campos..."
+              class="w-full sm:w-80 border px-4 py-2 rounded shadow-sm" />
+            <span class="absolute right-3 top-2.5 text-gray-400 pointer-events-none">🔍</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <label for="pageSize" class="text-sm text-gray-600">Filas por página</label>
+            <select id="pageSize" class="border px-3 py-2 rounded shadow-sm">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div class="bg-white shadow rounded-lg overflow-x-auto">
@@ -61,73 +79,198 @@
               <th class="px-4 py-3">Nombre</th>
               <th class="px-4 py-3">Categoría</th>
               <th class="px-4 py-3">País</th>
-              <th class="px-4 py-3">Última Fecha</th>
+              <th class="px-4 py-3">Creado</th>
+              <th class="px-4 py-3">Última actualización</th>
               <th class="px-4 py-3">Fuente</th>
               <th class="px-4 py-3">Estado</th>
             </tr>
           </thead>
-          <tbody id="tablaMinas">
-            <!-- Contenido cargado por JS -->
-          </tbody>
+          <tbody id="tablaMinas"></tbody>
         </table>
+      </div>
+
+      <!-- Footer de tabla: contador + paginación -->
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-4">
+        <div id="rangeInfo" class="text-sm text-gray-600">Mostrando 0–0 de 0</div>
+
+        <div id="pagination" class="flex flex-wrap items-center gap-1">
+          <!-- Controles se pintan por JS -->
+        </div>
       </div>
     </div>
   </div>
 
   <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec";
+
+    // Estado
+    let DATA_ORIGINAL = [];
+    let DATA_FILTRADA = [];
+    let currentPage = 1;
+    let pageSize = 50;
+
+    // Utilidades
+    const debounce = (fn, delay = 300) => {
+      let t;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), delay);
+      };
+    };
+
+    function toDateSafe(s) {
+      if (!s) return '';
+      const d = new Date(s);
+      if (isNaN(d.getTime())) return s; // si no es fecha ISO válida, devuélvela tal cual
+      return d.toLocaleString(); // puedes cambiar a toLocaleDateString si prefieres solo fecha
+    }
+
+    // Render tabla (solo página actual)
+    function renderTabla() {
+      const tbody = document.getElementById("tablaMinas");
+      tbody.innerHTML = "";
+
+      const total = DATA_FILTRADA.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const startIdx = (currentPage - 1) * pageSize;
+      const endIdx = Math.min(startIdx + pageSize, total);
+      const slice = DATA_FILTRADA.slice(startIdx, endIdx);
+
+      if (!slice.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">Sin resultados</td></tr>`;
+      } else {
+        const filas = slice.map((m) => `
+          <tr class="border-t">
+            <td class="px-4 py-2">${m.nombre || ""}</td>
+            <td class="px-4 py-2">${m.categoria || ""}</td>
+            <td class="px-4 py-2">${m.pais || ""}</td>
+            <td class="px-4 py-2">${toDateSafe(m.timestamp)}</td>
+            <td class="px-4 py-2">${toDateSafe(m.last_value)}</td>
+            <td class="px-4 py-2">${m.source || ""}</td>
+            <td class="px-4 py-2">${m.estado || ""}</td>
+          </tr>
+        `).join("");
+        tbody.innerHTML = filas;
+      }
+
+      // Rango e info
+      document.getElementById("rangeInfo").textContent =
+        `Mostrando ${total ? (startIdx + 1) : 0}–${endIdx} de ${total}`;
+
+      renderPaginacion(total, totalPages);
+    }
+
+    // Render paginación
+    function renderPaginacion(total, totalPages) {
+      const cont = document.getElementById("pagination");
+      cont.innerHTML = "";
+
+      const makeBtn = (label, onClick, disabled = false, active = false) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = label;
+        btn.className = `btn-page px-3 py-1 rounded border ${active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-50'}`
+        btn.disabled = disabled;
+        btn.addEventListener("click", onClick);
+        return btn;
+      };
+
+      const totalPagesSafe = Math.max(1, totalPages);
+
+      // Primera / Anterior
+      cont.appendChild(makeBtn("« Primera", () => { currentPage = 1; renderTabla(); }, currentPage === 1));
+      cont.appendChild(makeBtn("‹ Anterior", () => { currentPage = Math.max(1, currentPage - 1); renderTabla(); }, currentPage === 1));
+
+      // Números de página (ventana de 5-7 páginas)
+      const windowSize = 7;
+      let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+      let end = Math.min(totalPagesSafe, start + windowSize - 1);
+      if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+
+      if (start > 1) {
+        cont.appendChild(makeBtn("1", () => { currentPage = 1; renderTabla(); }, false, currentPage === 1));
+        if (start > 2) {
+          const dots = document.createElement("span");
+          dots.textContent = "…";
+          dots.className = "px-2 text-gray-500";
+          cont.appendChild(dots);
+        }
+      }
+
+      for (let p = start; p <= end; p++) {
+        cont.appendChild(makeBtn(String(p), () => { currentPage = p; renderTabla(); }, false, currentPage === p));
+      }
+
+      if (end < totalPagesSafe) {
+        if (end < totalPagesSafe - 1) {
+          const dots2 = document.createElement("span");
+          dots2.textContent = "…";
+          dots2.className = "px-2 text-gray-500";
+          cont.appendChild(dots2);
+        }
+        cont.appendChild(makeBtn(String(totalPagesSafe), () => { currentPage = totalPagesSafe; renderTabla(); }, false, currentPage === totalPagesSafe));
+      }
+
+      // Siguiente / Última
+      cont.appendChild(makeBtn("Siguiente ›", () => { currentPage = Math.min(totalPagesSafe, currentPage + 1); renderTabla(); }, currentPage === totalPagesSafe));
+      cont.appendChild(makeBtn("Última »", () => { currentPage = totalPagesSafe; renderTabla(); }, currentPage === totalPagesSafe));
+    }
+
+    // Filtro global
+    function aplicarFiltro(valor) {
+      const v = (valor || "").toLowerCase().trim();
+      if (!v) {
+        DATA_FILTRADA = [...DATA_ORIGINAL];
+      } else {
+        DATA_FILTRADA = DATA_ORIGINAL.filter((m) =>
+          Object.values(m).some((val) => String(val ?? "").toLowerCase().includes(v))
+        );
+      }
+      currentPage = 1;
+      renderTabla();
+    }
+
+    // Fetch
     async function cargarMinas() {
       const loader = document.getElementById("loader");
       loader.style.display = "flex";
 
       try {
-        const res = await fetch(
-          "https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=obtener_minas"
-        );
+        const res = await fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+          body: "action=obtener_minas"
+        });
+
+        if (!res.ok) throw new Error("Falló la solicitud (" + res.status + ")");
         const data = await res.json();
 
         if (data.success && Array.isArray(data.minas)) {
-          renderizarTabla(data.minas);
+          DATA_ORIGINAL = data.minas;
+          DATA_FILTRADA = [...DATA_ORIGINAL];
+          renderTabla();
 
-          document
-            .getElementById("filtroGlobal")
-            .addEventListener("input", () => {
-              const valor = document
-                .getElementById("filtroGlobal")
-                .value.toLowerCase();
-              const filtrados = data.minas.filter((m) =>
-                Object.values(m).some((val) =>
-                  String(val).toLowerCase().includes(valor)
-                )
-              );
-              renderizarTabla(filtrados);
-            });
+          // Listeners
+          const input = document.getElementById("filtroGlobal");
+          input.addEventListener("input", debounce((e) => aplicarFiltro(e.target.value), 250));
+
+          const sel = document.getElementById("pageSize");
+          sel.addEventListener("change", (e) => {
+            pageSize = parseInt(e.target.value, 10) || 50;
+            currentPage = 1;
+            renderTabla();
+          });
         } else {
-          throw new Error("No se pudo obtener la lista de minas");
+          throw new Error(data.error || "No se pudo obtener la lista de minas");
         }
       } catch (err) {
+        console.error(err);
         Swal.fire("Error", err.message, "error");
       } finally {
         loader.style.display = "none";
       }
-    }
-
-    function renderizarTabla(minas) {
-      const tbody = document.getElementById("tablaMinas");
-      tbody.innerHTML = ""; 
-
-      minas.forEach((m) => {
-        const fila = `
-          <tr class="border-t">
-            <td class="px-4 py-2">${m.nombre || ""}</td>
-            <td class="px-4 py-2">${m.categoria || ""}</td>
-            <td class="px-4 py-2">${m.pais || ""}</td>
-            <td class="px-4 py-2">${m.last_value || ""}</td>
-            <td class="px-4 py-2">${m.source || ""}</td>
-            <td class="px-4 py-2">${m.estado || ""}</td>
-          </tr>
-        `;
-        tbody.innerHTML += fila;
-      });
     }
 
     // Ejecutar
