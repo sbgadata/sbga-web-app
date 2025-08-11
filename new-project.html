@@ -73,9 +73,12 @@
 
 
                 <div>
-                    <label class="block text-sm font-semibold mb-1">Mina</label>
-                    <input name="mina" required class="w-full px-3 py-2 border rounded" />
-                </div>
+    <label class="block text-sm font-semibold mb-1">Mina</label>
+    <select name="mina" id="selectMina" required class="w-full px-3 py-2 border rounded">
+        <option value="">Seleccione una mina</option>
+    </select>
+</div>
+
 
                 <div>
                     <label class="block text-sm font-semibold mb-1">Número de beneficiarios</label>
@@ -113,6 +116,32 @@
     </script>
 
     <script>
+    async function cargarMinas() {
+        try {
+            const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=obtener_minas");
+            const data = await res.json();
+            const select = document.getElementById("selectMina");
+
+            if (data.success && Array.isArray(data.minas)) {
+                data.minas.forEach(mina => {
+                    const option = document.createElement("option");
+                    option.value = mina.id;       // Guarda el ID
+                    option.textContent = mina.nombre; // Muestra el nombre
+                    select.appendChild(option);
+                });
+            } else {
+                throw new Error("No se pudieron cargar las minas.");
+            }
+        } catch (error) {
+            Swal.fire("Error", error.message, "error");
+        }
+    }
+
+    cargarMinas();
+</script>
+
+
+    <script>
         const form = document.getElementById("formProyecto");
 
         form.addEventListener("submit", async function (e) {
@@ -130,7 +159,6 @@
                 nombre: form.nombre.value,
                 tipo: form.tipo.value,
                 pais_id: form.pais.value,
-
                 mina: form.mina.value,
                 beneficiarios: form.beneficiarios.value,
                 costo: form.costo.value
