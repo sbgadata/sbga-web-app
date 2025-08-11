@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Añadir datos de Exportación | SBGA</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
@@ -19,9 +18,8 @@
     </script>
 
     <div class="flex min-h-screen">
-        <!-- index.html -->
+        <!-- Sidebar -->
         <div id="sidebar-container"></div>
-
         <script>
             fetch('aside.html')
                 .then(res => res.text())
@@ -63,7 +61,7 @@
                     <label class="block text-sm font-medium text-gray-700">Mina *</label>
                     <select id="mina_id" required
                         class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500">
-                        <option value="">Buscando minas disponibles...</option>
+                        <option value="">Cargando minas...</option>
                     </select>
                 </div>
 
@@ -87,14 +85,24 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Refinador</label>
-                    <input type="text" id="refinador"
-                        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+                    <select id="refinador"
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                        <option value="">Seleccione refinador</option>
+                        <option value="Refinador 1">Refinador 1</option>
+                        <option value="Refinador 2">Refinador 2</option>
+                        <option value="Refinador 3">Refinador 3</option>
+                    </select>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Comprador</label>
-                    <input type="text" id="comprador"
-                        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+                    <select id="comprador"
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                        <option value="">Seleccione comprador</option>
+                        <option value="Comprador 1">Comprador 1</option>
+                        <option value="Comprador 2">Comprador 2</option>
+                        <option value="Comprador 3">Comprador 3</option>
+                    </select>
                 </div>
 
                 <div class="md:col-span-2">
@@ -113,34 +121,63 @@
 
         </main>
 
+        <!-- Cargar minas desde BigQuery (mostrar nombre, guardar id, evitar nombres repetidos) -->
         <script>
-    async function cargarMinas() {
-        try {
-            const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=obtener_minas");
-            const result = await res.json();
+            const GAS_URL = "https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec";
 
-            if (!result.success) throw new Error(result.error || "Error al obtener minas");
-
+            async function cargarMinas() {
             const select = document.getElementById("mina_id");
-            select.innerHTML = '<option value="">Seleccione una mina</option>';
+            select.disabled = true;
+            select.innerHTML = '<option value="">Cargando minas...</option>';
 
-            result.minas.forEach(mina => {
+            try {
+                const res = await fetch(GAS_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+                body: "action=obtener_minas"
+                });
+
+                if (!res.ok) throw new Error("Solicitud fallida (" + res.status + ")");
+                const result = await res.json();
+                if (!result.success) throw new Error(result.error || "Error al obtener minas");
+
+                const minas = Array.isArray(result.minas) ? result.minas : [];
+                if (!minas.length) {
+                select.innerHTML = '<option value="">No hay minas disponibles</option>';
+                select.disabled = false;
+                return;
+                }
+
+                // Filtrar nombres repetidos
+                const nombresSet = new Set();
+                const minasUnicas = minas.filter(mina => {
+                const nombre = mina.nombre || "(sin nombre)";
+                if (nombresSet.has(nombre)) return false;
+                nombresSet.add(nombre);
+                return true;
+                });
+
+                select.innerHTML = '<option value="">Seleccione una mina</option>';
+                minasUnicas.forEach(mina => {
                 const option = document.createElement("option");
-                option.value = mina.id;
-                option.textContent = mina.nombre;
+                option.value = mina.id || "";
+                option.textContent = mina.nombre || "(sin nombre)";
                 select.appendChild(option);
-            });
-        } catch (err) {
-            console.error("Error al cargar minas:", err);
-            Swal.fire("Error", "No se pudieron cargar las minas", "error");
-        }
-    }
+                });
 
-    // Llamar al cargar la página
-    cargarMinas();
-</script>
+            } catch (err) {
+                console.error("Error al cargar minas:", err);
+                Swal.fire("Error", "No se pudieron cargar las minas", "error");
+                select.innerHTML = '<option value="">Error al cargar minas</option>';
+            } finally {
+                select.disabled = false;
+            }
+            }
 
+            cargarMinas();
+        </script>
 
+        <!-- Guardar formulario -->
         <script>
             document.getElementById("form-operativo").addEventListener("submit", async (e) => {
                 e.preventDefault();
@@ -156,10 +193,15 @@
                     comprador: document.getElementById("comprador").value,
                 };
 
+                if (!data.mina_id) {
+                    Swal.fire("Validación", "Seleccione una mina", "warning");
+                    return;
+                }
+
                 try {
                     Swal.fire({ title: "Guardando...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-                    const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec", {
+                    const res = await fetch(GAS_URL, {
                         method: "POST",
                         headers: { "Content-Type": "text/plain;charset=utf-8" },
                         body: JSON.stringify(data)
@@ -182,9 +224,17 @@
         </script>
     </div>
 
+    <!-- Poner el nombre/rol después de que aside cargue -->
     <script>
-        document.getElementById("userName").innerText = usuario.nombre;
-        document.getElementById("userRol").innerText = usuario.rol;
+        const _interval = setInterval(() => {
+            const nameEl = document.getElementById("userName");
+            const rolEl = document.getElementById("userRol");
+            if (nameEl && rolEl) {
+                nameEl.innerText = usuario.nombre || '';
+                rolEl.innerText = usuario.rol || '';
+                clearInterval(_interval);
+            }
+        }, 100);
     </script>
 </body>
 
