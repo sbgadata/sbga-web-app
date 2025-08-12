@@ -81,7 +81,6 @@
               <th class="px-4 py-3">País</th>
               <th class="px-4 py-3">Creado</th>
               <th class="px-4 py-3">Última actualización</th>
-              <th class="px-4 py-3">Fuente</th>
               <th class="px-4 py-3">Estado</th>
             </tr>
           </thead>
@@ -118,11 +117,22 @@
       };
     };
 
-    function toDateSafe(s) {
-      if (!s) return '';
-      const d = new Date(s);
-      if (isNaN(d.getTime())) return s; // si no es fecha ISO válida, devuélvela tal cual
-      return d.toLocaleString(); // puedes cambiar a toLocaleDateString si prefieres solo fecha
+    // --- Normalización y formato de fechas ---
+    function toEpochMs(v) {
+      if (v === null || v === undefined || v === '' || v === 'NULL') return null;
+      let n = Number(v);
+      if (!Number.isFinite(n)) return null;
+      // Si parece segundos (o notación científica que da ~1e9), convertir a ms
+      if (n < 1e12) n = n * 1000;
+      return n;
+    }
+
+    function formatearFechaHumana(v) {
+      const ms = toEpochMs(v);
+      if (ms === null) return '';
+      const d = new Date(ms);
+      if (isNaN(d.getTime())) return '';
+      return new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
     }
 
     // Render tabla (solo página actual)
@@ -139,16 +149,15 @@
       const slice = DATA_FILTRADA.slice(startIdx, endIdx);
 
       if (!slice.length) {
-        tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">Sin resultados</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">Sin resultados</td></tr>`;
       } else {
         const filas = slice.map((m) => `
           <tr class="border-t">
             <td class="px-4 py-2">${m.nombre || ""}</td>
             <td class="px-4 py-2">${m.categoria || ""}</td>
             <td class="px-4 py-2">${m.pais || ""}</td>
-            <td class="px-4 py-2">${toDateSafe(m.timestamp)}</td>
-            <td class="px-4 py-2">${toDateSafe(m.last_value)}</td>
-            <td class="px-4 py-2">${m.source || ""}</td>
+            <td class="px-4 py-2">${formatearFechaHumana(m.timestamp)}</td>
+            <td class="px-4 py-2">${formatearFechaHumana(m.last_value)}</td>
             <td class="px-4 py-2">${m.estado || ""}</td>
           </tr>
         `).join("");
@@ -183,7 +192,7 @@
       cont.appendChild(makeBtn("« Primera", () => { currentPage = 1; renderTabla(); }, currentPage === 1));
       cont.appendChild(makeBtn("‹ Anterior", () => { currentPage = Math.max(1, currentPage - 1); renderTabla(); }, currentPage === 1));
 
-      // Números de página (ventana de 5-7 páginas)
+      // Números de página
       const windowSize = 7;
       let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
       let end = Math.min(totalPagesSafe, start + windowSize - 1);
@@ -233,57 +242,58 @@
     }
 
     async function cargarMinas() {
-  const loader = document.getElementById("loader");
-  loader.style.display = "flex";
+      const loader = document.getElementById("loader");
+      loader.style.display = "flex";
 
-  try {
-    const res = await fetch(GAS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
-      body: "action=obtener_minas"
-    });
+      try {
+        const res = await fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+          body: "action=obtener_minas"
+        });
 
-    if (!res.ok) throw new Error("Falló la solicitud (" + res.status + ")");
-    const data = await res.json();
+        if (!res.ok) throw new Error("Falló la solicitud (" + res.status + ")");
+        const data = await res.json();
 
-    if (data.success && Array.isArray(data.minas)) {
-      // --- Agrupar por nombre y quedarse con el más reciente ---
-      const minasUnicas = Object.values(
-        data.minas.reduce((acc, mina) => {
-          const nombreKey = (mina.nombre || "").trim().toLowerCase();
-          const fechaActual = new Date(mina.timestamp || 0).getTime();
-          if (!acc[nombreKey] || fechaActual > new Date(acc[nombreKey].timestamp || 0).getTime()) {
-            acc[nombreKey] = mina;
-          }
-          return acc;
-        }, {})
-      );
+        if (data.success && Array.isArray(data.minas)) {
+          // --- Agrupar por nombre y quedarse con el más reciente ---
+          const minasUnicas = Object.values(
+            data.minas.reduce((acc, mina) => {
+              const nombreKey = (mina.nombre || "").trim().toLowerCase();
+              const fechaActualMs = toEpochMs(mina.timestamp) ?? 0;
+              const fechaGuardadaMs = toEpochMs(acc[nombreKey]?.timestamp) ?? 0;
+              if (!acc[nombreKey] || fechaActualMs > fechaGuardadaMs) {
+                acc[nombreKey] = mina;
+              }
+              return acc;
+            }, {})
+          );
 
-      // Asignar y renderizar
-      DATA_ORIGINAL = minasUnicas;
-      DATA_FILTRADA = [...DATA_ORIGINAL];
-      renderTabla();
+          // Asignar y renderizar
+          DATA_ORIGINAL = minasUnicas;
+          DATA_FILTRADA = [...DATA_ORIGINAL];
+          renderTabla();
 
-      // Listeners
-      const input = document.getElementById("filtroGlobal");
-      input.addEventListener("input", debounce((e) => aplicarFiltro(e.target.value), 250));
+          // Listeners
+          const input = document.getElementById("filtroGlobal");
+          input.addEventListener("input", debounce((e) => aplicarFiltro(e.target.value), 250));
 
-      const sel = document.getElementById("pageSize");
-      sel.addEventListener("change", (e) => {
-        pageSize = parseInt(e.target.value, 10) || 50;
-        currentPage = 1;
-        renderTabla();
-      });
-    } else {
-      throw new Error(data.error || "No se pudo obtener la lista de minas");
+          const sel = document.getElementById("pageSize");
+          sel.addEventListener("change", (e) => {
+            pageSize = parseInt(e.target.value, 10) || 50;
+            currentPage = 1;
+            renderTabla();
+          });
+        } else {
+          throw new Error(data.error || "No se pudo obtener la lista de minas");
+        }
+      } catch (err) {
+        console.error(err);
+        Swal.fire("Error", err.message, "error");
+      } finally {
+        loader.style.display = "none";
+      }
     }
-  } catch (err) {
-    console.error(err);
-    Swal.fire("Error", err.message, "error");
-  } finally {
-    loader.style.display = "none";
-  }
-}
 
     // Ejecutar
     cargarMinas();
