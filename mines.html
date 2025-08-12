@@ -238,45 +238,38 @@
       loader.style.display = "flex";
 
       try {
-      const res = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
-        body: "action=obtener_minas"
-      });
-
-      if (!res.ok) throw new Error("Falló la solicitud (" + res.status + ")");
-      const data = await res.json();
-
-      if (data.success && Array.isArray(data.minas)) {
-        // Filtrar minas duplicadas por nombre
-        const seen = new Set();
-        DATA_ORIGINAL = data.minas.filter(m => {
-        if (!m.nombre) return false;
-        if (seen.has(m.nombre)) return false;
-        seen.add(m.nombre);
-        return true;
+        const res = await fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+          body: "action=obtener_minas"
         });
-        DATA_FILTRADA = [...DATA_ORIGINAL];
-        renderTabla();
 
-        // Listeners
-        const input = document.getElementById("filtroGlobal");
-        input.addEventListener("input", debounce((e) => aplicarFiltro(e.target.value), 250));
+        if (!res.ok) throw new Error("Falló la solicitud (" + res.status + ")");
+        const data = await res.json();
 
-        const sel = document.getElementById("pageSize");
-        sel.addEventListener("change", (e) => {
-        pageSize = parseInt(e.target.value, 10) || 50;
-        currentPage = 1;
-        renderTabla();
-        });
-      } else {
-        throw new Error(data.error || "No se pudo obtener la lista de minas");
-      }
+        if (data.success && Array.isArray(data.minas)) {
+          DATA_ORIGINAL = data.minas;
+          DATA_FILTRADA = [...DATA_ORIGINAL];
+          renderTabla();
+
+          // Listeners
+          const input = document.getElementById("filtroGlobal");
+          input.addEventListener("input", debounce((e) => aplicarFiltro(e.target.value), 250));
+
+          const sel = document.getElementById("pageSize");
+          sel.addEventListener("change", (e) => {
+            pageSize = parseInt(e.target.value, 10) || 50;
+            currentPage = 1;
+            renderTabla();
+          });
+        } else {
+          throw new Error(data.error || "No se pudo obtener la lista de minas");
+        }
       } catch (err) {
-      console.error(err);
-      Swal.fire("Error", err.message, "error");
+        console.error(err);
+        Swal.fire("Error", err.message, "error");
       } finally {
-      loader.style.display = "none";
+        loader.style.display = "none";
       }
     }
 
