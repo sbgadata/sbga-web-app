@@ -65,7 +65,7 @@
 
   <!-- Script principal -->
   <script>
-    // Validar sesión antes de todo
+    // Validar sesión
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) window.location.href = "index.html";
 
@@ -74,7 +74,6 @@
       .then(res => res.text())
       .then(data => {
         document.getElementById('sidebar-container').innerHTML = data;
-
         const nombre = document.getElementById("userName");
         const rol = document.getElementById("userRol");
         if (nombre && rol && usuario) {
@@ -84,59 +83,124 @@
       })
       .catch(err => console.error('Error cargando el aside:', err));
 
-    // Formato de fecha
+    // ---- Utilidades ----
     function formatearFecha(fechaISO) {
-      const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
+      if (!fechaISO) return '—';
       const fecha = new Date(fechaISO);
+      if (isNaN(fecha)) return '—';
+      const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
       return fecha.toLocaleDateString('es-ES', opciones);
     }
 
-    // Cargar contribuciones
-    async function cargarContribuciones() {
+    const fmtUSD = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+
+    function construirNombreMiembro(m) {
+      // Intentar campos "bonitos" si existen
+      const directos = m.nombre || m.nombre_formateado || m.nombre_miembro || m.display;
+      if (directos) return String(directos);
+
+      // Componer: "empresa (nombre apellido)" si hay datos
+      const empresa = m.nombre_empresa || '';
+      const persona = [m.nombre_contacto, m.apellido_contacto].filter(Boolean).join(' ').trim();
+      if (empresa && persona) return `${empresa} (${persona})`;
+      return empresa || persona || '—';
+    }
+
+    // ---- Carga de datos ----
+    async function cargarDatos() {
       const loader = document.getElementById("loader");
       loader.style.display = "flex";
 
+      const URL_BASE = "https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec";
+
       try {
-        const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=obtener_contribuciones");
-        const data = await res.json();
+        // Cargar miembros y contribuciones en paralelo
+        const [resMiembros, resContrib] = await Promise.all([
+          fetch(`${URL_BASE}?action=obtener_miembros`),
+          fetch(`${URL_BASE}?action=obtener_contribuciones`)
+        ]);
 
-        if (!data.success) throw new Error("No se pudieron cargar las contribuciones");
+        const [dataMiembros, dataContrib] = await Promise.all([resMiembros.json(), resContrib.json()]);
 
-        renderizarTabla(data.contribuciones);
+        if (!dataMiembros.success || !Array.isArray(dataMiembros.miembros)) {
+          throw new Error("No se pudieron cargar los miembros");
+        }
+        if (!dataContrib.success || !Array.isArray(dataContrib.contribuciones)) {
+          throw new Error("No se pudieron cargar las contribuciones");
+        }
 
-        document.getElementById("filtroGlobal").addEventListener("input", () => {
-          const valor = document.getElementById("filtroGlobal").value.toLowerCase();
-          const filtradas = data.contribuciones.filter(c =>
-            Object.values(c).some(v => String(v).toLowerCase().includes(valor))
+        // Mapa id → nombre
+        const memberNameById = new Map(
+          dataMiembros.miembros.map(m => [String(m.id), construirNombreMiembro(m)])
+        );
+
+        // Enriquecer contribuciones con el nombre del miembro
+        const contribucionesEnriquecidas = dataContrib.contribuciones.map(c => {
+          const id = c.miembro_id != null ? String(c.miembro_id) : "";
+          const nombre = memberNameById.get(id) || c.miembro_nombre || '—';
+          return { ...c, miembro_nombre: nombre };
+        });
+
+        // Render inicial
+        renderizarTabla(contribucionesEnriquecidas);
+
+        // Filtro global
+        const inputFiltro = document.getElementById("filtroGlobal");
+        inputFiltro.addEventListener("input", () => {
+          const q = inputFiltro.value.toLowerCase();
+          const filtradas = contribucionesEnriquecidas.filter(c =>
+            // Buscar sobre campos visibles + algunos útiles
+            [
+              c.miembro_nombre,
+              c.descripcion,
+              c.fecha,
+              c.valor_monetario,
+              c.miembro_id
+            ].map(v => String(v ?? '')).some(txt => txt.toLowerCase().includes(q))
           );
           renderizarTabla(filtradas);
         });
 
       } catch (err) {
+        console.error(err);
         Swal.fire("Error", err.message, "error");
       } finally {
         loader.style.display = "none";
       }
     }
 
-    // Dibujar tabla
+    // ---- Render ----
     function renderizarTabla(contribuciones) {
       const tbody = document.getElementById("tablaContribuciones");
       tbody.innerHTML = "";
 
-      contribuciones.forEach(c => {
-        const fila = `<tr class="border-t">
-          <td class="px-4 py-2">${c.miembro_id || ''}</td>
-          <td class="px-4 py-2">${formatearFecha(c.fecha)}</td>
-          <td class="px-4 py-2">$${Number(c.valor_monetario).toLocaleString("es-CO")}</td>
-          <td class="px-4 py-2">${c.descripcion || ''}</td>
+      if (!contribuciones.length) {
+        tbody.innerHTML = `<tr class="border-t">
+          <td class="px-4 py-3 text-gray-500" colspan="4">Sin resultados</td>
         </tr>`;
-        tbody.innerHTML += fila;
+        return;
+      }
+
+      const filas = contribuciones.map(c => {
+        const miembro = c.miembro_nombre || '—';
+        const fecha = formatearFecha(c.fecha);
+        const valor = c.valor_monetario != null && c.valor_monetario !== ''
+          ? fmtUSD.format(Number(c.valor_monetario))
+          : fmtUSD.format(0);
+
+        return `<tr class="border-t">
+          <td class="px-4 py-2">${miembro}</td>
+          <td class="px-4 py-2">${fecha}</td>
+          <td class="px-4 py-2">${valor}</td>
+          <td class="px-4 py-2">${c.descripcion ? String(c.descripcion) : ''}</td>
+        </tr>`;
       });
+
+      tbody.innerHTML = filas.join("");
     }
 
-    // Ejecutar carga
-    cargarContribuciones();
+    // Ejecutar
+    cargarDatos();
   </script>
 </body>
 

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registrar Viaje a suiza | SBGA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </head>
+
+  <body class="bg-gray-100">
+    <!-- Guard: sesión -->
+    <script>
+      const usuario = JSON.parse(localStorage.getItem("usuario"));
+      if (!usuario) window.location.href = "index.html";
+    </script>
+
+    <div class="flex min-h-screen">
+      <!-- Sidebar -->
+      <div id="sidebar-container"></div>
+      <script>
+        fetch("aside.html")
+          .then((res) => res.text())
+          .then((data) => (document.getElementById("sidebar-container").innerHTML = data))
+          .catch((err) => console.error("Error cargando el aside:", err));
+
+        function logoutConfirm() {
+          Swal.fire({
+            title: "¿Cerrar sesión?",
+            text: "Tu sesión se cerrará.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#aaa",
+            confirmButtonText: "Sí, salir",
+            cancelButtonText: "Cancelar",
+          }).then((r) => {
+            if (r.isConfirmed) {
+              localStorage.removeItem("usuario");
+              window.location.href = "index.html";
+            }
+          });
+        }
+      </script>
+
+      <!-- Contenido -->
+      <main class="flex-1 p-8 bg-gray-50">
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold text-gray-800">Viajes a Suiza</h1>
+          <p class="text-sm text-gray-500">Registre un viaje y las minas participantes</p>
+        </div>
+
+        <form id="form-travel" class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-lg shadow">
+          <!-- Fechas -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Fecha de inicio *</label>
+            <input
+              type="date"
+              id="fecha_inicio"
+              required
+              class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Fecha de finalización *</label>
+            <input
+              type="date"
+              id="fecha_fin"
+              required
+              class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <!-- Minas (multiselect bonito) -->
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700">Minas que participaron *</label>
+
+            <!-- Campo oculto con el CSV que se enviará -->
+            <input type="hidden" id="minas_csv" />
+
+            <!-- Chips de seleccionados -->
+            <div id="chips" class="flex flex-wrap gap-2 mt-2 min-h-[2rem]"></div>
+
+            <!-- Contenedor dropdown -->
+            <div class="relative mt-2">
+              <button
+                type="button"
+                id="toggleDropdown"
+                class="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-2 text-left hover:border-gray-400 focus:ring-2 focus:ring-blue-500"
+              >
+                <span id="dropdownLabel" class="text-gray-700">Seleccionar minas</span>
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <div
+                id="dropdown"
+                class="hidden absolute z-50 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg"
+              >
+                <!-- Acciones -->
+                <div class="flex items-center justify-between gap-2 p-2 border-b bg-gray-50">
+                  <button type="button" id="selectAll" class="text-xs px-2 py-1 rounded bg-gray-200 hover:bg-gray-300">
+                    Seleccionar todas
+                  </button>
+                  <button type="button" id="clearAll" class="text-xs px-2 py-1 rounded bg-gray-200 hover:bg-gray-300">
+                    Limpiar
+                  </button>
+                </div>
+
+                <!-- Buscador -->
+                <div class="p-2 border-b">
+                  <input
+                    id="search"
+                    type="text"
+                    placeholder="Buscar mina..."
+                    class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <!-- Lista -->
+                <div id="options" class="max-h-64 overflow-auto p-2" role="listbox" aria-multiselectable="true"></div>
+              </div>
+            </div>
+
+            <p class="text-xs text-gray-500 mt-2">
+              Usa el buscador para filtrar. Haz clic para seleccionar/deseleccionar. También puedes usar “Seleccionar todas” o “Limpiar”.
+            </p>
+          </div>
+
+          <!-- Botones -->
+          <div class="md:col-span-2 flex justify-end gap-3 mt-4">
+            <button type="reset" id="btnReset" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+              Cancelar
+            </button>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar</button>
+          </div>
+        </form>
+      </main>
+
+      <!-- GAS URL -->
+      <script>
+        const GAS_URL =
+          "https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec";
+      </script>
+
+      <!-- Lógica del multiselect y carga de minas -->
+      <script>
+        const state = {
+          minas: [],          // [{id, nombre, timestamp}, ...] deduplicadas
+          filtered: [],       // mismo shape, tras filtro
+          selected: new Set() // Set de ids
+        };
+
+        const el = {
+          dropdown: document.getElementById("dropdown"),
+          toggle: document.getElementById("toggleDropdown"),
+          label: document.getElementById("dropdownLabel"),
+          options: document.getElementById("options"),
+          search: document.getElementById("search"),
+          chips: document.getElementById("chips"),
+          minasCSV: document.getElementById("minas_csv"),
+          selectAll: document.getElementById("selectAll"),
+          clearAll: document.getElementById("clearAll"),
+          btnReset: document.getElementById("btnReset"),
+        };
+
+        function norm(s) {
+          return (s || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim()
+            .toLowerCase();
+        }
+
+        function closeOnOutsideClick(e) {
+          if (!el.dropdown.contains(e.target) && !el.toggle.contains(e.target)) {
+            el.dropdown.classList.add("hidden");
+            document.removeEventListener("click", closeOnOutsideClick);
+          }
+        }
+
+        el.toggle.addEventListener("click", () => {
+          el.dropdown.classList.toggle("hidden");
+          if (!el.dropdown.classList.contains("hidden")) {
+            el.search.focus();
+            document.addEventListener("click", closeOnOutsideClick);
+          }
+        });
+
+        el.search.addEventListener("input", () => {
+          const q = norm(el.search.value);
+          state.filtered = !q
+            ? state.minas
+            : state.minas.filter((m) => norm(m.nombre).includes(q));
+          renderOptions();
+        });
+
+        el.selectAll.addEventListener("click", () => {
+          state.filtered.forEach((m) => state.selected.add(String(m.id)));
+          syncAndRender();
+        });
+
+        el.clearAll.addEventListener("click", () => {
+          state.selected.clear();
+          syncAndRender();
+        });
+
+        el.btnReset.addEventListener("click", () => {
+          state.selected.clear();
+          syncAndRender();
+        });
+
+        function renderOptions() {
+          el.options.innerHTML = "";
+          if (!state.filtered.length) {
+            el.options.innerHTML =
+              '<div class="text-sm text-gray-500 px-2 py-1">Sin resultados</div>';
+            return;
+          }
+          state.filtered.forEach((m) => {
+            const checked = state.selected.has(String(m.id));
+            const row = document.createElement("button");
+            row.type = "button";
+            row.className =
+              "w-full flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-100 text-left";
+            row.setAttribute("role", "option");
+            row.setAttribute("aria-selected", checked ? "true" : "false");
+            row.addEventListener("click", () => {
+              const id = String(m.id);
+              if (state.selected.has(id)) state.selected.delete(id);
+              else state.selected.add(id);
+              syncAndRender();
+            });
+
+            row.innerHTML = `
+              <span class="inline-flex h-5 w-5 items-center justify-center border rounded ${checked ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-transparent'}">
+                ✓
+              </span>
+              <span class="text-sm text-gray-700">${m.nombre || "(sin nombre)"}</span>
+            `;
+
+            el.options.appendChild(row);
+          });
+        }
+
+        function renderChips() {
+          el.chips.innerHTML = "";
+          if (state.selected.size === 0) {
+            el.chips.innerHTML = '<span class="text-xs text-gray-500">Ninguna mina seleccionada</span>';
+            el.label.textContent = "Seleccionar minas";
+            return;
+          }
+
+          // Mostrar primeras N como chips y el resto como “+X”
+          const maxChips = 4;
+          const selectedArr = [...state.selected];
+          const mapById = Object.fromEntries(state.minas.map((m) => [String(m.id), m.nombre || "(sin nombre)"]));
+
+          selectedArr.slice(0, maxChips).forEach((id) => {
+            const chip = document.createElement("span");
+            chip.className =
+              "inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-200";
+            chip.innerHTML = `
+              ${mapById[id] ?? id}
+              <button type="button" class="text-blue-600 hover:text-blue-800" aria-label="Quitar">×</button>
+            `;
+            chip.querySelector("button").addEventListener("click", () => {
+              state.selected.delete(id);
+              syncAndRender();
+            });
+            el.chips.appendChild(chip);
+          });
+
+          if (selectedArr.length > maxChips) {
+            const badge = document.createElement("span");
+            badge.className =
+              "inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border";
+            badge.textContent = `+${selectedArr.length - maxChips}`;
+            el.chips.appendChild(badge);
+          }
+
+          el.label.textContent = `${selectedArr.length} seleccionada${selectedArr.length > 1 ? "s" : ""}`;
+        }
+
+        function syncHiddenCSV() {
+          el.minasCSV.value = [...state.selected].join(",");
+        }
+
+        function syncAndRender() {
+          syncHiddenCSV();
+          renderChips();
+          renderOptions();
+        }
+
+        // Carga de minas (desde tu GAS)
+        async function cargarMinas() {
+          const res = await fetch(GAS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+            body: "action=obtener_minas",
+          });
+          if (!res.ok) throw new Error("Solicitud fallida (" + res.status + ")");
+          const result = await res.json();
+          if (!result.success) throw new Error(result.error || "Error al obtener minas");
+
+          // Deduplicar por nombre (mantener la más reciente)
+          const minas = Array.isArray(result.minas) ? result.minas : [];
+          const porNombre = {};
+          minas.forEach((m) => {
+            if (!m || !m.nombre) return;
+            const key = norm(m.nombre);
+            const ts = new Date(m.timestamp || 0).getTime();
+            if (!porNombre[key] || ts > new Date(porNombre[key].timestamp || 0).getTime()) {
+              porNombre[key] = m;
+            }
+          });
+          const únicas = Object.values(porNombre)
+            .filter((m) => m.id && String(m.id).trim() !== "")
+            .sort((a, b) => norm(a.nombre).localeCompare(norm(b.nombre)));
+
+          state.minas = únicas;
+          state.filtered = únicas;
+          syncAndRender();
+        }
+
+        // Init
+        cargarMinas().catch((err) => {
+          console.error("Error al cargar minas:", err);
+          Swal.fire("Error", "No se pudieron cargar las minas", "error");
+        });
+      </script>
+
+      <!-- Guardar Travel -->
+      <script>
+        document.getElementById("form-travel").addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const minasCSV = document.getElementById("minas_csv").value;
+          const data = {
+            action: "guardar_travel",
+            fecha_inicio: document.getElementById("fecha_inicio").value,
+            fecha_fin: document.getElementById("fecha_fin").value,
+            minas: minasCSV, // CSV "id1,id2,id3"
+          };
+
+          // Validaciones mínimas
+          if (!data.fecha_inicio || !data.fecha_fin) {
+            Swal.fire("Validación", "Completa las fechas de inicio y fin.", "warning");
+            return;
+          }
+          if (!minasCSV) {
+            Swal.fire("Validación", "Selecciona al menos una mina.", "warning");
+            return;
+          }
+
+          try {
+            Swal.fire({ title: "Guardando...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            const res = await fetch(GAS_URL, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain;charset=utf-8" }, // CORS-safe
+              body: JSON.stringify(data),
+            });
+
+            const result = await res.json();
+            Swal.close();
+
+            if (result.success) {
+              Swal.fire("Éxito", "Viaje guardado correctamente", "success");
+              // Reset UI
+              e.target.reset();
+              // Limpiar selección UI
+              const ev = new Event("click");
+              document.getElementById("btnReset")?.dispatchEvent(ev);
+              document.getElementById("minas_csv").value = "";
+            } else {
+              Swal.fire("Error", result.error || "Error al guardar", "error");
+            }
+          } catch (err) {
+            Swal.close();
+            Swal.fire("Error", "No se pudo conectar con el servidor", "error");
+          }
+        });
+      </script>
+    </div>
+
+    <!-- Pintar nombre/rol cuando cargue el aside -->
+    <script>
+      const _interval = setInterval(() => {
+        const nameEl = document.getElementById("userName");
+        const rolEl = document.getElementById("userRol");
+        if (nameEl && rolEl) {
+          nameEl.innerText = usuario?.nombre || "";
+          rolEl.innerText = usuario?.rol || "";
+          clearInterval(_interval);
+        }
+      }, 100);
+    </script>
+  </body>
+</html>

@@ -1,295 +1,293 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Crear proyecto | SBGA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  </head>
+</head>
 
-  <body class="bg-gray-100">
+<body class="bg-gray-100">
     <script>
-      const usuario = JSON.parse(localStorage.getItem("usuario"));
-      if (!usuario) window.location.href = "index.html";
+        const usuario = JSON.parse(localStorage.getItem("usuario"));
+        if (!usuario) window.location.href = "index.html";
     </script>
 
     <div class="flex min-h-screen">
-      <!-- Sidebar -->
-      <div id="sidebar-container"></div>
-      <script>
-        fetch("aside.html")
-          .then((res) => res.text())
-          .then((html) => {
-            document.getElementById("sidebar-container").innerHTML = html;
-            // poner nombre/rol cuando ya existe el aside en el DOM
-            const nameEl = document.getElementById("userName");
-            const rolEl = document.getElementById("userRol");
-            if (nameEl) nameEl.textContent = usuario?.nombre || "";
-            if (rolEl) rolEl.textContent = usuario?.rol || "";
-          })
-          .catch((err) => console.error("Error cargando el aside:", err));
+        <!-- Sidebar -->
+        <div id="sidebar-container"></div>
+        <script>
+            fetch("aside.html")
+                .then((res) => res.text())
+                .then((html) => {
+                    document.getElementById("sidebar-container").innerHTML = html;
+                    // poner nombre/rol cuando ya existe el aside en el DOM
+                    const nameEl = document.getElementById("userName");
+                    const rolEl = document.getElementById("userRol");
+                    if (nameEl) nameEl.textContent = usuario?.nombre || "";
+                    if (rolEl) rolEl.textContent = usuario?.rol || "";
+                })
+                .catch((err) => console.error("Error cargando el aside:", err));
 
-        function logoutConfirm() {
-          Swal.fire({
-            title: "¿Cerrar sesión?",
-            text: "Tu sesión se cerrará.",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#d33",
-            cancelButtonColor: "#aaa",
-            confirmButtonText: "Sí, salir",
-            cancelButtonText: "Cancelar",
-          }).then((r) => {
-            if (r.isConfirmed) {
-              localStorage.removeItem("usuario");
-              window.location.href = "index.html";
+            function logoutConfirm() {
+                Swal.fire({
+                    title: "¿Cerrar sesión?",
+                    text: "Tu sesión se cerrará.",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#d33",
+                    cancelButtonColor: "#aaa",
+                    confirmButtonText: "Sí, salir",
+                    cancelButtonText: "Cancelar",
+                }).then((r) => {
+                    if (r.isConfirmed) {
+                        localStorage.removeItem("usuario");
+                        window.location.href = "index.html";
+                    }
+                });
             }
-          });
-        }
-      </script>
+        </script>
 
-      <main class="flex-1 p-8">
-        <h1 class="text-2xl font-bold text-gray-800 mb-6">Nuevo Proyecto</h1>
+        <main class="flex-1 p-8">
+            <h1 class="text-2xl font-bold text-gray-800 mb-6">Nuevo Proyecto</h1>
 
-        <form
-          id="formProyecto"
-          class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded shadow"
-        >
-          <div>
-            <label class="block text-sm font-semibold mb-1"
-              >Nombre del proyecto</label
-            >
-            <input
-              name="nombre"
-              required
-              class="w-full px-3 py-2 border rounded"
-            />
-          </div>
+            <form id="formProyecto" class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded shadow">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Nombre del proyecto</label>
+                    <input name="nombre" required class="w-full px-3 py-2 border rounded" />
+                </div>
 
-          <div>
-            <label class="block text-sm font-semibold mb-1"
-              >Tipo de proyecto</label
-            >
-            <input
-              name="tipo"
-              required
-              class="w-full px-3 py-2 border rounded"
-            />
-          </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Tipo de proyecto</label>
+                    <select name="tipo" required class="w-full px-3 py-2 border rounded">
+                        <option value="">Seleccione un tipo</option>
+                        <option value="Ambiental">Ambiental</option>
+                        <option value="Asistencia Técnica">Asistencia Técnica</option>
+                        <option value="Social">Social</option>
+                    </select>
+                </div>
 
-          <div>
-            <label class="block text-sm font-semibold mb-1">País</label>
-            <select
-              name="pais"
-              id="selectPais"
-              required
-              class="w-full px-3 py-2 border rounded"
-            >
-              <option value="">Seleccione un país</option>
-            </select>
-          </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">País</label>
+                    <select name="pais" id="selectPais" required class="w-full px-3 py-2 border rounded">
+                        <option value="">Cargando países...</option>
+                    </select>
+                </div>
 
-          <div>
-            <label class="block text-sm font-semibold mb-1">Mina</label>
-            <select
-              name="mina"
-              id="selectMina"
-              required
-              class="w-full px-3 py-2 border rounded"
-            >
-              <option value="">Seleccione una mina</option>
-            </select>
-          </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Mina</label>
+                    <select name="mina" id="mina_id" required class="w-full px-3 py-2 border rounded">
+                        <option value="">Cargando minas...</option>
+                    </select>
+                </div>
 
-          <div>
-            <label class="block text-sm font-semibold mb-1"
-              >Número de beneficiarios</label
-            >
-            <input
-              name="beneficiarios"
-              type="number"
-              required
-              class="w-full px-3 py-2 border rounded"
-            />
-          </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Número de beneficiarios</label>
+                    <input name="beneficiarios" type="number" required class="w-full px-3 py-2 border rounded" />
+                </div>
 
-          <div>
-            <label class="block text-sm font-semibold mb-1"
-              >Costo total del proyecto (USD)</label
-            >
-            <input
-              name="costo"
-              type="number"
-              required
-              class="w-full px-3 py-2 border rounded"
-            />
-          </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Costo total del proyecto (USD)</label>
+                    <input name="costo" type="number" required class="w-full px-3 py-2 border rounded" />
+                </div>
 
-          <div class="md:col-span-2 text-right">
-            <button
-              type="submit"
-              class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow"
-            >
-              Guardar
-            </button>
-          </div>
-        </form>
-      </main>
+                <div class="md:col-span-2 text-right">
+                    <button id="btnGuardar" type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow disabled:opacity-60">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </main>
     </div>
+    <script
+        src="https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=minas_select_js"></script>
 
     <script>
-      const GAS_URL =
-        "https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec";
-      const norm = (s) =>
-        (s || "")
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .trim()
-          .toLowerCase();
+        const GAS_URL =
+            "https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec";
 
-      async function cargarMinas() {
-        const select = document.getElementById("selectMina");
-        select.disabled = true;
-        select.innerHTML = '<option value="">Cargando minas...</option>';
+        const norm = (s) =>
+            (s || "")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .trim()
+                .toLowerCase();
 
-        try {
-          const res = await fetch(GAS_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
-            },
-            body: "action=obtener_minas",
-          });
-          if (!res.ok)
-            throw new Error("Solicitud fallida (" + res.status + ")");
-          const data = await res.json();
-          if (!(data.success && Array.isArray(data.minas)))
-            throw new Error(data.error || "No se pudieron cargar las minas.");
-
-          // Dedupe por nombre (más reciente por timestamp)
-          const porNombre = {};
-          (data.minas || []).forEach((m) => {
-            if (!m || !m.nombre) return;
-            const key = norm(m.nombre);
-            const ts = new Date(m.timestamp || 0).getTime();
-            if (
-              !porNombre[key] ||
-              ts > new Date(porNombre[key].timestamp || 0).getTime()
-            ) {
-              porNombre[key] = m;
+        async function cargarPaises() {
+            const select = document.getElementById("selectPais");
+            select.disabled = true;
+            select.innerHTML = '<option value="">Cargando países...</option>';
+            try {
+                const res = await fetch(`${GAS_URL}?action=obtener_paises`);
+                if (!res.ok) throw new Error("Solicitud fallida (" + res.status + ")");
+                const data = await res.json();
+                if (data.success && Array.isArray(data.paises)) {
+                    select.innerHTML = '<option value="">Seleccione un país</option>';
+                    data.paises.forEach((pais) => {
+                        const option = document.createElement("option");
+                        option.value = pais.id;
+                        option.textContent = pais.nombre;
+                        select.appendChild(option);
+                    });
+                } else {
+                    throw new Error("No se pudieron cargar los países.");
+                }
+            } catch (error) {
+                console.error(error);
+                Swal.fire("Error", error.message, "error");
+                select.innerHTML = '<option value="">Error al cargar países</option>';
+            } finally {
+                select.disabled = false;
             }
-          });
-
-          const minasUnicas = Object.values(porNombre)
-            .filter((m) => m.id && String(m.id).trim() !== "")
-            .sort((a, b) => norm(a.nombre).localeCompare(norm(b.nombre)));
-
-          select.innerHTML = '<option value="">Seleccione una mina</option>';
-          minasUnicas.forEach((mina) => {
-            const opt = document.createElement("option");
-            opt.value = mina.id; // guarda el ID
-            opt.textContent = mina.nombre; // muestra el nombre
-            select.appendChild(opt);
-          });
-
-          if (!minasUnicas.length) {
-            select.innerHTML =
-              '<option value="">No hay minas disponibles</option>';
-          }
-        } catch (err) {
-          console.error(err);
-          Swal.fire("Error", err.message, "error");
-          select.innerHTML = '<option value="">Error al cargar minas</option>';
-        } finally {
-          select.disabled = false;
         }
-      }
+        
+        async function cargarMinas() {
+            const select = document.getElementById("mina_id");
+            select.disabled = true;
+            select.innerHTML = '<option value="">Cargando minas...</option>';
 
-      // Cargar Países (igual que tenías)
-      async function cargarPaises() {
-        const select = document.getElementById("selectPais");
-        try {
-          const res = await fetch(`${GAS_URL}?action=obtener_paises`);
-          const data = await res.json();
-          if (data.success && Array.isArray(data.paises)) {
-            data.paises.forEach((pais) => {
-              const option = document.createElement("option");
-              option.value = pais.id;
-              option.textContent = pais.nombre;
-              select.appendChild(option);
-            });
-          } else {
-            throw new Error("No se pudieron cargar los países.");
-          }
-        } catch (error) {
-          Swal.fire("Error", error.message, "error");
+            const norm = (s) =>
+                (s || "")
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .trim()
+                    .toLowerCase();
+
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/x-www-form-urlencoded;charset=utf-8",
+                    },
+                    body: "action=obtener_minas",
+                });
+
+                if (!res.ok)
+                    throw new Error("Solicitud fallida (" + res.status + ")");
+                const result = await res.json();
+                if (!result.success)
+                    throw new Error(result.error || "Error al obtener minas");
+
+                const minas = Array.isArray(result.minas) ? result.minas : [];
+
+                // Dedupe por nombre normalizado y QUEDARSE con la más reciente por timestamp
+                const porNombre = {};
+                minas.forEach((m) => {
+                    if (!m || !m.nombre) return;
+                    const key = norm(m.nombre);
+                    const ts = new Date(m.timestamp || 0).getTime();
+                    if (
+                        !porNombre[key] ||
+                        ts > new Date(porNombre[key].timestamp || 0).getTime()
+                    ) {
+                        porNombre[key] = m;
+                    }
+                });
+
+                const minasUnicas = Object.values(porNombre)
+                    // Solo con id válido
+                    .filter((m) => m.id && String(m.id).trim() !== "")
+                    // Orden alfabético por nombre
+                    .sort((a, b) => norm(a.nombre).localeCompare(norm(b.nombre)));
+
+                if (!minasUnicas.length) {
+                    select.innerHTML =
+                        '<option value="">No hay minas disponibles</option>';
+                    select.disabled = false;
+                    return;
+                }
+
+                select.innerHTML = '<option value="">Seleccione una mina</option>';
+                minasUnicas.forEach((mina) => {
+                    const option = document.createElement("option");
+                    option.value = mina.id; // ✅ ahora viene desde el backend
+                    option.textContent = mina.nombre || "(sin nombre)";
+                    select.appendChild(option);
+                });
+            } catch (err) {
+                console.error("Error al cargar minas:", err);
+                Swal.fire("Error", "No se pudieron cargar las minas", "error");
+                select.innerHTML =
+                    '<option value="">Error al cargar minas</option>';
+            } finally {
+                select.disabled = false;
+            }
         }
-      }
 
-      // Ejecutar cargas
-      cargarMinas();
-      cargarPaises();
+        cargarMinas();
+
+        cargarPaises();
+
     </script>
 
     <script>
-      const form = document.getElementById("formProyecto");
+        const form = document.getElementById("formProyecto");
+        const btnGuardar = document.getElementById("btnGuardar");
 
-      form.addEventListener("submit", async function (e) {
-        e.preventDefault();
+        form.addEventListener("submit", async function (e) {
+            e.preventDefault();
 
-        const usuario = JSON.parse(localStorage.getItem("usuario"));
-        if (!usuario) return (window.location.href = "index.html");
+            const usuario = JSON.parse(localStorage.getItem("usuario"));
+            if (!usuario) return (window.location.href = "index.html");
 
-        const datos = {
-          action: "guardar_proyecto",
-          usuario: usuario.nombre,
-          rol: usuario.rol,
-          nombre: form.nombre.value,
-          tipo: form.tipo.value,
-          pais_id: form.pais.value,
-          mina_id: form.mina.value,
-          beneficiarios: form.beneficiarios.value,
-          costo: form.costo.value,
-        };
+            const datos = {
+                action: "guardar_proyecto",
+                usuario: usuario.nombre,
+                rol: usuario.rol,
+                nombre: form.nombre.value,
+                tipo: form.tipo.value,
+                pais_id: form.pais.value,
+                mina_id: form.mina.value, // guardamos el ID de la mina
+                beneficiarios: form.beneficiarios.value,
+                costo: form.costo.value,
+            };
 
-        Swal.fire({
-          title: "Guardando...",
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading(),
-          background: "#fff",
-          backdrop: "rgba(0, 0, 0, 0.2)",
-        });
-
-        try {
-          const res = await fetch(GAS_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify(datos),
-          });
-          const r = await res.json();
-          Swal.close();
-
-          if (r.success) {
             Swal.fire({
-              title: "✅ Proyecto registrado",
-              icon: "success",
-              confirmButtonColor: "#dc2626",
+                title: "Guardando...",
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+                background: "#fff",
+                backdrop: "rgba(0, 0, 0, 0.2)",
             });
-            form.reset();
-          } else {
-            throw new Error(r.error || "Error al guardar");
-          }
-        } catch (err) {
-          Swal.close();
-          Swal.fire({
-            title: "❌ Error",
-            text: err.message,
-            icon: "error",
-            confirmButtonColor: "#dc2626",
-          });
-        }
-      });
+
+            btnGuardar.disabled = true;
+
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" }, // evita preflight
+                    body: JSON.stringify(datos),
+                });
+                const r = await res.json();
+                Swal.close();
+
+                if (r.success) {
+                    Swal.fire({
+                        title: "✅ Proyecto registrado",
+                        icon: "success",
+                        confirmButtonColor: "#dc2626",
+                    });
+                    form.reset();
+                } else {
+                    throw new Error(r.error || "Error al guardar");
+                }
+            } catch (err) {
+                Swal.close();
+                Swal.fire({
+                    title: "❌ Error",
+                    text: err.message,
+                    icon: "error",
+                    confirmButtonColor: "#dc2626",
+                });
+            } finally {
+                btnGuardar.disabled = false;
+            }
+        });
     </script>
-  </body>
+</body>
+
 </html>

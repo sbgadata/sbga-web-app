@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lista de Viajes a suiza | SBGA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    .btn-page[disabled] { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+
+<body class="bg-gray-100">
+  <script>
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
+    if (!usuario) window.location.href = "index.html";
+  </script>
+
+  <div class="flex min-h-screen">
+    <!-- Loader -->
+    <div id="loader" class="fixed inset-0 flex justify-center items-center bg-white bg-opacity-70 z-20">
+      <div class="flex flex-col items-center gap-2">
+        <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <p class="text-sm text-gray-600">Cargando datos...</p>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div id="sidebar-container"></div>
+    <script>
+      fetch("aside.html")
+        .then((res) => res.text())
+        .then((data) => {
+          document.getElementById("sidebar-container").innerHTML = data;
+          const nameEl = document.getElementById("userName");
+          const rolEl = document.getElementById("userRol");
+          if (nameEl) nameEl.innerText = usuario?.nombre || '';
+          if (rolEl) rolEl.innerText = usuario?.rol || '';
+        })
+        .catch((err) => console.error("Error cargando el aside:", err));
+    </script>
+
+    <!-- Contenido -->
+    <div class="p-6 md:p-8 w-full">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+        <h1 class="text-2xl font-bold text-gray-800">Viajes a Suiza</h1>
+
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div class="relative">
+            <input type="text" id="filtroGlobal" placeholder="Buscar en todos los campos..."
+                   class="w-full sm:w-80 border px-4 py-2 rounded shadow-sm" />
+            <span class="absolute right-3 top-2.5 text-gray-400 pointer-events-none">🔍</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <label for="pageSize" class="text-sm text-gray-600">Filas por página</label>
+            <select id="pageSize" class="border px-3 py-2 rounded shadow-sm">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white shadow rounded-lg overflow-x-auto">
+        <table class="min-w-full text-sm text-left text-gray-700">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="px-4 py-3">ID</th>
+              <th class="px-4 py-3">Fecha inicio</th>
+              <th class="px-4 py-3">Fecha fin</th>
+              <th class="px-4 py-3">Creado</th>
+              <th class="px-4 py-3">Minas</th>
+            </tr>
+          </thead>
+          <tbody id="tablaTravels"></tbody>
+        </table>
+      </div>
+
+      <!-- Footer tabla -->
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-4">
+        <div id="rangeInfo" class="text-sm text-gray-600">Mostrando 0–0 de 0</div>
+        <div id="pagination" class="flex flex-wrap items-center gap-1"><!-- JS pinta acá --></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal minas -->
+  <div id="modalBackdrop" class="fixed inset-0 bg-black bg-opacity-40 hidden z-40"></div>
+  <div id="modal" class="fixed inset-0 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b bg-gray-50">
+        <h3 id="modalTitle" class="text-lg font-semibold text-gray-800">Minas del viaje</h3>
+        <button id="modalClose" class="p-2 rounded hover:bg-gray-100" aria-label="Cerrar">
+          ✕
+        </button>
+      </div>
+      <div class="p-5">
+        <div id="modalBody" class="grid sm:grid-cols-2 gap-3">
+          <!-- Tarjetas de minas -->
+        </div>
+        <div id="modalEmpty" class="hidden text-center text-gray-500 py-6">Este viaje no tiene minas asociadas.</div>
+      </div>
+      <div class="px-5 py-4 border-t bg-gray-50 text-right">
+        <button id="modalOk" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec";
+
+    // Estado
+    let TRAVELS = [];                  // [{id, fecha_inicio, fecha_fin, timestamp}]
+    let RELATIONS = [];                // [{id, travel_id, mine_id, timestamp}]
+    let MINE_NAME_BY_ID = new Map();   // Map<string, string> - preloaded now
+    let DATA_FILTRADA = [];
+    let currentPage = 1;
+    let pageSize = 50;
+
+    // Utils
+    const debounce = (fn, delay = 300) => { let t; return (...a)=>{clearTimeout(t); t=setTimeout(()=>fn(...a),delay);} };
+    const toEpochMs = (v) => {
+      if (v === null || v === undefined || v === '' || v === 'NULL') return null;
+      let n = Number(v);
+      if (!Number.isFinite(n)) {
+        // tratar como fecha ISO/string
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? null : d.getTime();
+      }
+      if (n < 1e12) n *= 1000; // segundos -> ms
+      return n;
+    };
+    const fechaHumana = (v) => {
+      const ms = toEpochMs(v);
+      if (ms === null) return '';
+      const d = new Date(ms);
+      if (isNaN(d.getTime())) return '';
+      return new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
+    };
+
+    // Loader
+    const showLoader = (s) => { const el = document.getElementById("loader"); el.style.display = s ? "flex" : "none"; };
+
+    // Modal
+    const modal = {
+      backdrop: document.getElementById("modalBackdrop"),
+      root: document.getElementById("modal"),
+      title: document.getElementById("modalTitle"),
+      body: document.getElementById("modalBody"),
+      empty: document.getElementById("modalEmpty"),
+      open() { this.backdrop.classList.remove("hidden"); this.root.classList.remove("hidden"); },
+      close() { this.backdrop.classList.add("hidden"); this.root.classList.add("hidden"); }
+    };
+    document.getElementById("modalClose").addEventListener("click", () => modal.close());
+    document.getElementById("modalOk").addEventListener("click", () => modal.close());
+    modal.backdrop.addEventListener("click", () => modal.close());
+
+    // Data helpers
+    function relationsByTravelId(travelId) {
+      return RELATIONS.filter(r => String(r.travel_id) === String(travelId));
+    }
+
+    // Preload mines data during initial load
+    async function loadMineNames() {
+      const res = await fetch(GAS_URL+"?action=obtener_minas", {
+        method: "GET",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+      });
+      if (!res.ok) throw new Error("Falló obtener minas (" + res.status + ")");
+      const data = await res.json();
+      if (!data.success || !Array.isArray(data.minas)) throw new Error(data.error || "Sin minas");
+
+      // Clear and populate the map
+      MINE_NAME_BY_ID.clear();
+      data.minas.forEach(m => {
+        if (!m) return;
+        const id = String(m.id ?? "").trim();
+        if (!id) return;
+        MINE_NAME_BY_ID.set(id, m.nombre || id);
+      });
+    }
+
+    // Render tabla
+    function renderTabla() {
+      const tbody = document.getElementById("tablaTravels");
+      tbody.innerHTML = "";
+
+      const total = DATA_FILTRADA.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const startIdx = (currentPage - 1) * pageSize;
+      const endIdx = Math.min(startIdx + pageSize, total);
+      const slice = DATA_FILTRADA.slice(startIdx, endIdx);
+
+      if (!slice.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">Sin resultados</td></tr>`;
+      } else {
+        const rows = slice.map(t => {
+          const minesCount = relationsByTravelId(t.id).length;
+          return `
+            <tr class="border-t">
+              <td class="px-4 py-2">${t.id ?? ""}</td>
+              <td class="px-4 py-2">${t.fecha_inicio ? fechaHumana(t.fecha_inicio) : ""}</td>
+              <td class="px-4 py-2">${t.fecha_fin ? fechaHumana(t.fecha_fin) : ""}</td>
+              <td class="px-4 py-2">${t.timestamp ? fechaHumana(t.timestamp) : ""}</td>
+              <td class="px-4 py-2">
+                <button
+                  type="button"
+                  data-travel="${t.id}"
+                  class="inline-flex items-center gap-2 whitespace-nowrap px-3 py-1 rounded border border-blue-600 text-blue-700 hover:bg-blue-50"
+                >
+                  Ver minas participantes (${minesCount})
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+        tbody.innerHTML = rows;
+      }
+
+      document.getElementById("rangeInfo").textContent =
+        `Mostrando ${total ? (startIdx + 1) : 0}–${endIdx} de ${total}`;
+
+      renderPaginacion(total, totalPages);
+
+      // Delegación: click en botones "Ver minas participantes"
+      tbody.querySelectorAll('button[data-travel]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const travelId = e.currentTarget.getAttribute('data-travel');
+          openMinesModal(travelId); // No need for async/await now!
+        });
+      });
+    }
+
+    function renderPaginacion(total, totalPages) {
+      const cont = document.getElementById("pagination");
+      cont.innerHTML = "";
+      const makeBtn = (label, onClick, disabled = false, active = false) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = label;
+        b.className = `btn-page px-3 py-1 rounded border ${active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-50'}`;
+        b.disabled = disabled;
+        b.addEventListener("click", onClick);
+        return b;
+      };
+
+      const totalPagesSafe = Math.max(1, totalPages);
+      cont.appendChild(makeBtn("« Primera", () => { currentPage = 1; renderTabla(); }, currentPage === 1));
+      cont.appendChild(makeBtn("‹ Anterior", () => { currentPage = Math.max(1, currentPage - 1); renderTabla(); }, currentPage === 1));
+
+      const windowSize = 7;
+      let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+      let end = Math.min(totalPagesSafe, start + windowSize - 1);
+      if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+
+      if (start > 1) {
+        cont.appendChild(makeBtn("1", () => { currentPage = 1; renderTabla(); }, false, currentPage === 1));
+        if (start > 2) cont.appendChild(Object.assign(document.createElement("span"), { textContent: "…", className: "px-2 text-gray-500" }));
+      }
+      for (let p = start; p <= end; p++) cont.appendChild(makeBtn(String(p), () => { currentPage = p; renderTabla(); }, false, currentPage === p));
+      if (end < totalPagesSafe) {
+        if (end < totalPagesSafe - 1) cont.appendChild(Object.assign(document.createElement("span"), { textContent: "…", className: "px-2 text-gray-500" }));
+        cont.appendChild(makeBtn(String(totalPagesSafe), () => { currentPage = totalPagesSafe; renderTabla(); }, false, currentPage === totalPagesSafe));
+      }
+
+      cont.appendChild(makeBtn("Siguiente ›", () => { currentPage = Math.min(totalPagesSafe, currentPage + 1); renderTabla(); }, currentPage === totalPagesSafe));
+      cont.appendChild(makeBtn("Última »", () => { currentPage = totalPagesSafe; renderTabla(); }, currentPage === totalPagesSafe));
+    }
+
+    function aplicarFiltro(valor) {
+      const v = (valor || "").toLowerCase().trim();
+      if (!v) {
+        DATA_FILTRADA = [...TRAVELS];
+      } else {
+        DATA_FILTRADA = TRAVELS.filter(t =>
+          Object.values(t).some(val => String(val ?? "").toLowerCase().includes(v))
+        );
+      }
+      currentPage = 1;
+      renderTabla();
+    }
+
+    // Abrir modal con minas del viaje - now instant since data is preloaded!
+    function openMinesModal(travelId) {
+      const rel = relationsByTravelId(travelId);
+      modal.title.textContent = `Minas del viaje #${travelId}`;
+
+      if (!rel.length) {
+        modal.body.innerHTML = "";
+        modal.empty.classList.remove("hidden");
+      } else {
+        modal.empty.classList.add("hidden");
+
+        // Dedupe por mine_id y ordenar por nombre
+        const unique = Array.from(new Set(rel.map(r => String(r.mine_id))));
+        unique.sort((a, b) => {
+          const an = (MINE_NAME_BY_ID.get(a) || a).toString().toLowerCase();
+          const bn = (MINE_NAME_BY_ID.get(b) || b).toString().toLowerCase();
+          return an.localeCompare(bn);
+        });
+
+        modal.body.innerHTML = unique.map(id => {
+          const name = MINE_NAME_BY_ID.get(id) || id;
+          return `
+            <div class="border rounded-lg p-3 hover:shadow-sm transition">
+              <div class="text-sm font-medium text-gray-800">${name}</div>
+              <div class="text-xs text-gray-500 mt-1">ID: ${id}</div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      modal.open();
+    }
+
+    // Carga inicial - now loads all data including mines
+    async function cargarDatos() {
+      showLoader(true);
+      try {
+        // Load all data in parallel for better performance
+        const [travelsPromise, relationsPromise, minesPromise] = [
+          // 1) Viajes
+          fetch(GAS_URL+ "?action=obtener_travels", {
+            method: "GET",
+            headers: { "Content-Type": "text/plain;charset=utf-8" }
+          }),
+          // 2) Relaciones travel-mines
+          fetch(GAS_URL + "?action=obtener_travel_mines" , {
+            method: "GET",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+          }),
+          // 3) Mine names (preload)
+          loadMineNames()
+        ];
+
+        // Wait for travels and relations
+        const [resTrav, resRel] = await Promise.all([travelsPromise, relationsPromise]);
+        
+        // Process travels response
+        if (!resTrav.ok) throw new Error("Falló obtener travels (" + resTrav.status + ")");
+        const dTrav = await resTrav.json();
+        if (!(dTrav.success && Array.isArray(dTrav.travels))) throw new Error(dTrav.error || "Sin travels");
+
+        TRAVELS = dTrav.travels;
+        DATA_FILTRADA = [...TRAVELS];
+
+        // Process relations response
+        if (!resRel.ok) throw new Error("Falló obtener relaciones (" + resRel.status + ")");
+        const dRel = await resRel.json();
+        if (!(dRel.success && Array.isArray(dRel.relations))) throw new Error(dRel.error || "Sin relaciones");
+        RELATIONS = dRel.relations;
+
+        // Wait for mines to finish loading (should be done by now due to parallel loading)
+        await minesPromise;
+
+        // Render + listeners
+        renderTabla();
+        document.getElementById("filtroGlobal").addEventListener("input", debounce(e => aplicarFiltro(e.target.value), 250));
+        document.getElementById("pageSize").addEventListener("change", (e) => {
+          pageSize = parseInt(e.target.value, 10) || 50;
+          currentPage = 1;
+          renderTabla();
+        });
+      } catch (err) {
+        console.error(err);
+        Swal.fire("Error", err.message, "error");
+      } finally {
+        showLoader(false);
+      }
+    }
+
+    cargarDatos();
+  </script>
+</body>
+</html>

@@ -45,66 +45,88 @@
       </div>
 
       <!-- Tabla -->
-      <div class="bg-white shadow rounded-lg overflow-x-auto">
+      <div class="bg-white shadow rounded-lg overflow-auto">
         <table class="min-w-full text-sm text-left text-gray-700">
           <thead class="bg-gray-100">
             <tr>
               <th class="px-4 py-3">Nombre del proyecto</th>
               <th class="px-4 py-3">Tipo de proyecto</th>
-              <th class="px-4 py-3">País</th>
               <th class="px-4 py-3">Mina</th>
               <th class="px-4 py-3"># Beneficiarios</th>
               <th class="px-4 py-3">Costo total (USD)</th>
             </tr>
           </thead>
-          <tbody id="tablaProyectos">
-            <!-- Llenado dinámico -->
-          </tbody>
+          <tbody id="tablaProyectos"></tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- Scripts -->
   <script>
-    // Validar sesión antes de cargar contenido
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec";
+
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) window.location.href = "index.html";
 
-    // Cargar aside y luego mostrar usuario
-    fetch('aside.html')
-      .then(res => res.text())
-      .then(data => {
-        document.getElementById('sidebar-container').innerHTML = data;
+    let mapaMinas = {};
+    let proyectosData = [];
 
-        // Asignar nombre y rol SOLO después de que se haya cargado el aside
-        const nombre = document.getElementById("userName");
-        const rol = document.getElementById("userRol");
-        if (nombre && rol && usuario) {
-          nombre.textContent = usuario.nombre || '';
-          rol.textContent = usuario.rol || '';
-        }
-      })
-      .catch(err => console.error('Error cargando el aside:', err));
+    async function cargarMinas() {
+      const resMinas = await fetch(GAS_URL + "?action=obtener_minas");
+      const dataMinas = await resMinas.json();
+      if (dataMinas.success) {
+        dataMinas.minas.forEach(m => {
+          mapaMinas[String(m.id).trim()] = m.nombre || m.nombre_mina || '';
+        });
+      }
+    }
 
-    // Cargar proyectos
+    function renderizarTabla(proyectos) {
+      const tbody = document.getElementById("tablaProyectos");
+      tbody.innerHTML = "";
+
+      proyectos.forEach(p => {
+        const minaId = String(p.mina).trim();
+        const minaNombre = mapaMinas[minaId] || p.mina || '';
+
+        const fila = `<tr class="border-t">
+          <td class="px-4 py-2">${p.nombre || ''}</td>
+          <td class="px-4 py-2">${p.tipo || ''}</td>
+          <td class="px-4 py-2">${minaNombre}</td>
+          <td class="px-4 py-2">${p.numero_de_beneficiarios || ''}</td>
+          <td class="px-4 py-2">$${p.costo_total || ''}</td>
+        </tr>`;
+        tbody.innerHTML += fila;
+      });
+    }
+
     async function cargarProyectos() {
       const loader = document.getElementById("loader");
       loader.style.display = "flex";
 
       try {
-        const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=obtener_proyectos");
-        const data = await res.json();
+        await cargarMinas(); // solo minas
 
+        const res = await fetch(GAS_URL + "?action=obtener_proyectos");
+        const data = await res.json();
         if (!data.success) throw new Error("No se pudieron obtener los proyectos");
 
-        renderizarTabla(data.proyectos);
+        proyectosData = data.proyectos;
+        renderizarTabla(proyectosData);
 
+        // Filtro global (sin país)
         document.getElementById("filtroGlobal").addEventListener("input", () => {
           const valor = document.getElementById("filtroGlobal").value.toLowerCase();
-          const filtrados = data.proyectos.filter(p =>
-            Object.values(p).some(val => String(val).toLowerCase().includes(valor))
-          );
+          const filtrados = proyectosData.filter(p => {
+            const minaNombre = mapaMinas[String(p.mina).trim()] || '';
+            return (
+              (p.nombre || '').toLowerCase().includes(valor) ||
+              (p.tipo || '').toLowerCase().includes(valor) ||
+              minaNombre.toLowerCase().includes(valor) ||
+              String(p.numero_de_beneficiarios || '').toLowerCase().includes(valor) ||
+              String(p.costo_total || '').toLowerCase().includes(valor)
+            );
+          });
           renderizarTabla(filtrados);
         });
 
@@ -115,26 +137,21 @@
       }
     }
 
-    // Mostrar tabla
-    function renderizarTabla(proyectos) {
-      const tbody = document.getElementById("tablaProyectos");
-      tbody.innerHTML = "";
-
-      proyectos.forEach(p => {
-        const fila = `<tr class="border-t">
-          <td class="px-4 py-2">${p.nombre || ''}</td>
-          <td class="px-4 py-2">${p.tipo || ''}</td>
-          <td class="px-4 py-2">${p.pais || ''}</td>
-          <td class="px-4 py-2">${p.mina || ''}</td>
-          <td class="px-4 py-2">${p.numero_de_beneficiarios || ''}</td>
-          <td class="px-4 py-2">$${p.costo_total || ''}</td>
-        </tr>`;
-        tbody.innerHTML += fila;
+    // Cargar aside
+    fetch('aside.html')
+      .then(res => res.text())
+      .then(data => {
+        document.getElementById('sidebar-container').innerHTML = data;
+        const nombre = document.getElementById("userName");
+        const rol = document.getElementById("userRol");
+        if (nombre && rol && usuario) {
+          nombre.textContent = usuario.nombre || '';
+          rol.textContent = usuario.rol || '';
+        }
       });
-    }
 
     cargarProyectos();
   </script>
-</body>
 
+</body>
 </html>
