@@ -11,9 +11,22 @@
 
 <body class="bg-gray-100">
   <script>
-    const usuario = JSON.parse(localStorage.getItem("usuario"));
-    if (!usuario) window.location.href = "index.html";
-  </script>
+  const usuario = JSON.parse(localStorage.getItem("usuario"));
+  if (!usuario) window.location.href = "index.html";
+
+  fetch('aside.html')
+    .then(res => res.text())
+    .then(html => {
+      document.getElementById('sidebar-container').innerHTML = html;
+      // Ahora los elementos existen:
+      const userNameEl = document.getElementById("userName");
+      const userRolEl  = document.getElementById("userRol");
+      if (userNameEl) userNameEl.innerText = usuario?.nombre ?? '';
+      if (userRolEl)  userRolEl.innerText  = usuario?.rol ?? '';
+    })
+    .catch(err => console.error('Error cargando el aside:', err));
+</script>
+
 
   <div class="flex min-h-screen">
     <!-- Sidebar -->
@@ -40,18 +53,6 @@
         </div>
 
         <div>
-          <label class="block mb-1 font-medium text-gray-700">Nombre contacto *</label>
-          <input type="text" id="nombre_contacto" required
-            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
-        </div>
-
-        <div>
-          <label class="block mb-1 font-medium text-gray-700">Apellido contacto *</label>
-          <input type="text" id="apellido_contacto" required
-            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
-        </div>
-
-        <div>
           <label class="block mb-1 font-medium text-gray-700">Tipo de miembro *</label>
           <select id="tipo_miembro" required
             class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500">
@@ -59,18 +60,6 @@
             <option value="Comprador Final">Comprador Final</option>
             <option value="Refinador">Refinador</option>
           </select>
-        </div>
-
-        <div>
-          <label class="block mb-1 font-medium text-gray-700">Celular *</label>
-          <input type="tel" id="celular" required
-            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
-        </div>
-
-        <div>
-          <label class="block mb-1 font-medium text-gray-700">Email *</label>
-          <input type="email" id="email" required
-            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500" />
         </div>
 
         <div>
@@ -112,83 +101,81 @@
     document.getElementById("userRol").innerText = usuario.rol;
   </script>
 
-  <script>
-    async function cargarPaises() {
-      const select = document.getElementById("pais");
+<script>
+  async function cargarPaises() {
+    const select = document.getElementById("pais");
+    try {
+      const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=obtener_paises");
+      const data = await res.json();
+      if (data.success) {
+        select.innerHTML = '<option value="">Seleccione un país</option>';
+        data.paises.forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p.nombre;
+          opt.textContent = p.nombre;
+          select.appendChild(opt);
+        });
+      } else {
+        select.innerHTML = '<option value="">Error cargando países</option>';
+      }
+    } catch {
+      select.innerHTML = '<option value="">Error de conexión</option>';
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    cargarPaises();
+
+    document.getElementById("form-miembro").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        action: "guardar_miembro",
+        nombre_empresa:     document.getElementById("nombre_empresa").value,
+        tipo_miembro:       document.getElementById("tipo_miembro").value,
+        sector:             document.getElementById("sector").value,
+        direccion_empresa:  document.getElementById("direccion_empresa").value,
+        telefono_empresa:   document.getElementById("telefono_empresa").value,
+        pais:               document.getElementById("pais").value
+      };
+
       try {
-        const res = await fetch("https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec?action=obtener_paises");
-        const data = await res.json();
-        if (data.success) {
-          select.innerHTML = '<option value="">Seleccione un país</option>';
-          data.paises.forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.nombre;
-            opt.textContent = p.nombre;
-            select.appendChild(opt);
+        Swal.fire({
+          title: "Guardando...",
+          text: "Por favor espera un momento",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+
+        // ⚠️ URL sin ?action=...; la acción va en el body
+        const res = await fetch('https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          redirect: 'follow'
+        });
+
+        const result = await res.json();
+        Swal.close();
+
+        if (result.success) {
+          Swal.fire("Éxito", result.mensaje || "Miembro guardado", "success").then(() => {
+            window.location.href = "members.html";
           });
         } else {
-          select.innerHTML = '<option value="">Error cargando países</option>';
+          throw new Error(result.error || "Error desconocido");
         }
-      } catch {
-        select.innerHTML = '<option value="">Error de conexión</option>';
+      } catch (err) {
+        console.error(err);
+        Swal.close();
+        Swal.fire("Error", "No se pudo conectar con el servidor", "error");
       }
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      cargarPaises();
-
-      document.getElementById("form-miembro").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const data = {
-          action: "guardar_miembro",
-          nombre_empresa: document.getElementById("nombre_empresa").value,
-          nombre_contacto: document.getElementById("nombre_contacto").value,
-          apellido_contacto: document.getElementById("apellido_contacto").value,
-          tipo_miembro: document.getElementById("tipo_miembro").value,
-          celular: document.getElementById("celular").value,
-          email: document.getElementById("email").value,
-          sector: document.getElementById("sector").value,
-          direccion_empresa: document.getElementById("direccion_empresa").value,
-          telefono_empresa: document.getElementById("telefono_empresa").value,
-          pais: document.getElementById("pais").value
-        };
-
-        try {
-          Swal.fire({
-            title: "Guardando...",
-            text: "Por favor espera un momento",
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-          });
-
-          const res = await fetch('https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec', {
-            method: 'POST',
-            body: JSON.stringify(data),
-            headers: {
-              'Content-Type': 'text/plain;charset=utf-8'
-            },
-            redirect: 'follow'
-          });
-
-          const result = await res.json();
-          Swal.close();
-
-          if (result.success) {
-            Swal.fire("Éxito", result.mensaje, "success").then(() => {
-              window.location.href = "members.html";
-            });
-          } else {
-            throw new Error(result.error || "Error desconocido");
-          }
-        } catch (err) {
-          Swal.close();
-          Swal.fire("Error", "No se pudo conectar con el servidor", "error");
-        }
-      });
-
     });
-  </script>
+  });
+</script>
+
 </body>
 
 </html>
