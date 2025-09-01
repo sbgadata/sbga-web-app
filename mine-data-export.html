@@ -11,9 +11,7 @@
   <body class="bg-gray-100">
     <script>
       const usuario = JSON.parse(localStorage.getItem("usuario"));
-      if (!usuario) {
-        window.location.href = "index.html";
-      }
+      if (!usuario) window.location.href = "index.html";
     </script>
 
     <div class="flex min-h-screen">
@@ -22,9 +20,7 @@
       <script>
         fetch("aside.html")
           .then((res) => res.text())
-          .then((data) => {
-            document.getElementById("sidebar-container").innerHTML = data;
-          })
+          .then((data) => (document.getElementById("sidebar-container").innerHTML = data))
           .catch((err) => console.error("Error cargando el aside:", err));
       </script>
 
@@ -39,8 +35,8 @@
             cancelButtonColor: "#aaa",
             confirmButtonText: "Sí, salir",
             cancelButtonText: "Cancelar",
-          }).then((result) => {
-            if (result.isConfirmed) {
+          }).then((r) => {
+            if (r.isConfirmed) {
               localStorage.removeItem("usuario");
               window.location.href = "index.html";
             }
@@ -54,118 +50,103 @@
           <p class="text-sm text-gray-500">Complete los datos de exportación</p>
         </div>
 
-        <form
-          id="form-operativo"
-          class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-lg shadow"
-        >
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700"
-              >Mina *</label
-            >
-            <select
-              id="mina_id"
-              required
-              class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            >
+        <!-- FORM -->
+        <form id="form-operativo" class="bg-white p-6 rounded-lg shadow grid grid-cols-12 gap-5">
+          <!-- Fila 1 -->
+          <div class="col-span-12 md:col-span-5">
+            <label for="mina_id" class="block text-sm font-medium text-gray-700">Mina *</label>
+            <select id="mina_id" required class="h-11 w-full border border-gray-300 rounded px-3 focus:ring-2 focus:ring-blue-500">
               <option value="">Cargando minas...</option>
             </select>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700"
-              >Fecha de exportación *</label
-            >
-            <input
-              type="date"
-              id="fecha_exportacion"
-              required
-              class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            />
+          <div class="col-span-12 sm:col-span-6 md:col-span-4">
+            <label for="fecha_exportacion" class="block text-sm font-medium text-gray-700">Fecha de exportación *</label>
+            <input type="date" id="fecha_exportacion" required class="h-11 w-full border border-gray-300 rounded px-3 focus:ring-2 focus:ring-blue-500" />
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700"
-              >Exportación Paso 1</label
-            >
-            <input
-              type="number"
-              id="paso1_exportacion"
-              class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            />
+          <div class="col-span-12 sm:col-span-6 md:col-span-3">
+            <label for="delivery_number" class="block text-sm font-medium text-gray-700">Delivery number</label>
+            <input type="text" id="delivery_number" placeholder="Ej: DO-000123" autocomplete="off" class="h-11 w-full border border-gray-300 rounded px-3 focus:ring-2 focus:ring-blue-500" />
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700"
-              >Exportación Paso 2</label
-            >
-            <input
-              type="number"
-              id="paso2_exportacion"
-              class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            />
+          <!-- Fila 2: Tarjetas iguales -->
+          <div class="col-span-12 md:col-span-6">
+            <div class="h-full border rounded-lg p-4 bg-gray-50">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-gray-800">Oro exportado (g)</h3>
+                <span class="text-xs text-gray-500">usar punto o coma</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="prerefined_exported_gold" class="block text-sm text-gray-700">Prerefined (g)</label>
+                  <input type="number" id="prerefined_exported_gold" step="0.001" min="0" inputmode="decimal" placeholder="0.000" class="h-11 w-full border border-gray-300 rounded px-3 focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label for="fine_exported_gold" class="block text-sm text-gray-700">Fine (g)</label>
+                  <input type="number" id="fine_exported_gold" step="0.001" min="0" inputmode="decimal" placeholder="0.000" class="h-11 w-full border border-gray-300 rounded px-3 focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700"
-              >Refinador</label
-            >
-            <select
-              id="refinador"
-              class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            >
+          <div class="col-span-12 md:col-span-6">
+            <div class="h-full border rounded-lg p-4 bg-gray-50">
+              <h3 class="font-semibold text-gray-800 mb-3">Notificador</h3>
+              <input type="text" id="notifier" placeholder="Nombre de quien notifica" autocomplete="off" class="h-11 w-full border border-gray-300 rounded px-3 focus:ring-2 focus:ring-blue-500" />
+              <p class="text-xs text-gray-500 mt-2">Persona o entidad que notifica el envío/exportación.</p>
+            </div>
+          </div>
+
+          <!-- Fila 3 -->
+          <div class="col-span-12 sm:col-span-6 md:col-span-3">
+            <label for="paso1_exportacion" class="block text-sm font-medium text-gray-700">Exportación Paso 1</label>
+            <input type="number" id="paso1_exportacion" step="1" min="0" inputmode="numeric" class="h-11 w-full border border-gray-300 rounded px-3 focus:ring-2 focus:ring-blue-500" />
+          </div>
+
+          <div class="col-span-12 sm:col-span-6 md:col-span-3">
+            <label for="paso2_exportacion" class="block text-sm font-medium text-gray-700">Exportación Paso 2</label>
+            <input type="number" id="paso2_exportacion" step="1" min="0" inputmode="numeric" class="h-11 w-full border border-gray-300 rounded px-3 focus:ring-2 focus:ring-blue-500" />
+          </div>
+
+          <div class="col-span-12 sm:col-span-6 md:col-span-3">
+            <label for="refinador" class="block text-sm font-medium text-gray-700">Refinador</label>
+            <select id="refinador" class="h-11 w-full border border-gray-300 rounded px-3 focus:ring-2 focus:ring-blue-500">
               <option value="">Seleccione refinador</option>
-              <option value="Refinador 1">MKS</option>
-              <option value="Refinador 2">VALCAMBI</option>
-              <option value="Refinador 3">ARGOR</option>
+              <option value="MKS">MKS</option>
+              <option value="Metalor">Metalor</option>
+              <option value="ARGOR">ARGOR</option>
             </select>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700"
-              >Comprador</label
-            >
-            <select
-              id="comprador"
-              class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            >
+          <div class="col-span-12 sm:col-span-6 md:col-span-3">
+            <label for="comprador" class="block text-sm font-medium text-gray-700">Comprador</label>
+            <select id="comprador" class="h-11 w-full border border-gray-300 rounded px-3 focus:ring-2 focus:ring-blue-500">
               <option value="">Seleccione comprador</option>
-              <option value="Comprador 1">Chopard</option>
-              <option value="Comprador 2">Prailine</option>
+              <option value="Chopard">Audemars</option>
+              <option value="Prailine">Piguet</option>
+              <option value="Cartier">Cartier</option> 
+              <option value="Chopard">Chopard</option> 
             </select>
           </div>
 
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700"
-              >Comentario exportación</label
-            >
-            <textarea
-              id="comentario_exportacion"
-              rows="3"
-              class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            ></textarea>
+          <!-- Fila 4 -->
+          <div class="col-span-12 md:col-span-9">
+            <label for="comentario_exportacion" class="block text-sm font-medium text-gray-700">Comentario exportación</label>
+            <textarea id="comentario_exportacion" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"></textarea>
           </div>
 
-          <div class="md:col-span-2 flex justify-end gap-3 mt-4">
-            <button
-              type="reset"
-              class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Guardar
-            </button>
+          <!-- Botones -->
+          <div class="col-span-12 md:col-span-3 flex items-end justify-end gap-3">
+            <button type="reset" class="h-11 px-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Cancelar</button>
+            <button type="submit" class="h-11 px-6 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar</button>
           </div>
         </form>
       </main>
 
-      <!-- Cargar minas desde BigQuery (mostrar nombre, guardar id, evitar nombres repetidos) -->
+      <!-- Cargar minas -->
       <script>
-        const GAS_URL =
-          "https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwrqoyq40zHZ4ESTSRSaknEy0-calbBxLfmpKJZ4GruiQQKSxRCfjAgfC6QO1QqBrkH/exec";
 
         async function cargarMinas() {
           const select = document.getElementById("mina_id");
@@ -173,53 +154,35 @@
           select.innerHTML = '<option value="">Cargando minas...</option>';
 
           const norm = (s) =>
-            (s || "")
-              .normalize("NFD")
-              .replace(/[\u0300-\u036f]/g, "")
-              .trim()
-              .toLowerCase();
+            (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 
           try {
             const res = await fetch(GAS_URL, {
               method: "POST",
-              headers: {
-                "Content-Type":
-                  "application/x-www-form-urlencoded;charset=utf-8",
-              },
+              headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
               body: "action=obtener_minas",
             });
-
-            if (!res.ok)
-              throw new Error("Solicitud fallida (" + res.status + ")");
+            if (!res.ok) throw new Error("Solicitud fallida (" + res.status + ")");
             const result = await res.json();
-            if (!result.success)
-              throw new Error(result.error || "Error al obtener minas");
+            if (!result.success) throw new Error(result.error || "Error al obtener minas");
 
             const minas = Array.isArray(result.minas) ? result.minas : [];
-
-            // Dedupe por nombre normalizado y QUEDARSE con la más reciente por timestamp
             const porNombre = {};
             minas.forEach((m) => {
               if (!m || !m.nombre) return;
               const key = norm(m.nombre);
               const ts = new Date(m.timestamp || 0).getTime();
-              if (
-                !porNombre[key] ||
-                ts > new Date(porNombre[key].timestamp || 0).getTime()
-              ) {
+              if (!porNombre[key] || ts > new Date(porNombre[key].timestamp || 0).getTime()) {
                 porNombre[key] = m;
               }
             });
 
             const minasUnicas = Object.values(porNombre)
-              // Solo con id válido
               .filter((m) => m.id && String(m.id).trim() !== "")
-              // Orden alfabético por nombre
               .sort((a, b) => norm(a.nombre).localeCompare(norm(b.nombre)));
 
             if (!minasUnicas.length) {
-              select.innerHTML =
-                '<option value="">No hay minas disponibles</option>';
+              select.innerHTML = '<option value="">No hay minas disponibles</option>';
               select.disabled = false;
               return;
             }
@@ -227,101 +190,85 @@
             select.innerHTML = '<option value="">Seleccione una mina</option>';
             minasUnicas.forEach((mina) => {
               const option = document.createElement("option");
-              option.value = mina.id; // ✅ ahora viene desde el backend
+              option.value = mina.id;
               option.textContent = mina.nombre || "(sin nombre)";
               select.appendChild(option);
             });
           } catch (err) {
             console.error("Error al cargar minas:", err);
             Swal.fire("Error", "No se pudieron cargar las minas", "error");
-            select.innerHTML =
-              '<option value="">Error al cargar minas</option>';
+            select.innerHTML = '<option value="">Error al cargar minas</option>';
           } finally {
             select.disabled = false;
           }
         }
-
         cargarMinas();
       </script>
 
-      <!-- Guardar formulario -->
+      <!-- Guardar -->
       <script>
-        document
-          .getElementById("form-operativo")
-          .addEventListener("submit", async (e) => {
-            e.preventDefault();
+        const toFloatOrNull = (value) => {
+          const s = String(value ?? "").replace(",", ".").trim();
+          if (!s) return null;
+          const n = parseFloat(s);
+          return Number.isFinite(n) ? n : null;
+        };
 
-            const data = {
-              action: "guardar_operativo",
-              mina_id: document.getElementById("mina_id").value,
-              fecha_exportacion:
-                document.getElementById("fecha_exportacion").value,
-              comentario_exportacion: document.getElementById(
-                "comentario_exportacion"
-              ).value,
-              paso1_exportacion:
-                parseFloat(
-                  document.getElementById("paso1_exportacion").value
-                ) || null,
-              paso2_exportacion:
-                parseFloat(
-                  document.getElementById("paso2_exportacion").value
-                ) || null,
-              refinador: document.getElementById("refinador").value,
-              comprador: document.getElementById("comprador").value,
-            };
+        document.getElementById("form-operativo").addEventListener("submit", async (e) => {
+          e.preventDefault();
 
-            if (!data.mina_id) {
-              Swal.fire("Validación", "Seleccione una mina", "warning");
-              return;
+          const data = {
+            action: "guardar_operativo",
+            mina_id: document.getElementById("mina_id").value,
+            fecha_exportacion: document.getElementById("fecha_exportacion").value,
+            comentario_exportacion: document.getElementById("comentario_exportacion").value,
+            paso1_exportacion: toFloatOrNull(document.getElementById("paso1_exportacion").value),
+            paso2_exportacion: toFloatOrNull(document.getElementById("paso2_exportacion").value),
+            refinador: document.getElementById("refinador").value,
+            comprador: document.getElementById("comprador").value,
+            delivery_number: document.getElementById("delivery_number").value,
+            prerefined_exported_gold: toFloatOrNull(document.getElementById("prerefined_exported_gold").value),
+            fine_exported_gold: toFloatOrNull(document.getElementById("fine_exported_gold").value),
+            notifier: document.getElementById("notifier").value,
+          };
+
+          if (!data.mina_id) return Swal.fire("Validación", "Seleccione una mina", "warning");
+          if (!data.fecha_exportacion) return Swal.fire("Validación", "Ingrese la fecha de exportación", "warning");
+
+          try {
+            Swal.fire({ title: "Guardando...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            const res = await fetch(GAS_URL, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain;charset=utf-8" },
+              body: JSON.stringify(data),
+            });
+
+            const result = await res.json();
+            Swal.close();
+
+            if (result.success) {
+              Swal.fire("Éxito", "Datos operativos guardados correctamente", "success");
+              document.getElementById("form-operativo").reset();
+            } else {
+              Swal.fire("Error", result.error || "Error al guardar", "error");
             }
-
-            try {
-              Swal.fire({
-                title: "Guardando...",
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
-              });
-
-              const res = await fetch(GAS_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(data),
-              });
-
-              const result = await res.json();
-              Swal.close();
-
-              if (result.success) {
-                Swal.fire(
-                  "Éxito",
-                  "Datos operativos guardados correctamente",
-                  "success"
-                );
-                document.getElementById("form-operativo").reset();
-              } else {
-                Swal.fire("Error", result.error || "Error al guardar", "error");
-              }
-            } catch (err) {
-              Swal.close();
-              Swal.fire(
-                "Error",
-                "No se pudo conectar con el servidor",
-                "error"
-              );
-            }
-          });
+          } catch (err) {
+            Swal.close();
+            Swal.fire("Error", "No se pudo conectar con el servidor", "error");
+          }
+        });
       </script>
     </div>
 
-    <!-- Poner el nombre/rol después de que aside cargue -->
+    <!-- User name/rol después del aside -->
     <script>
       const _interval = setInterval(() => {
-        const nameEl = document.getElementById("userName");
-        const rolEl = document.getElementById("userRol");
-        if (nameEl && rolEl) {
-          nameEl.innerText = usuario.nombre || "";
-          rolEl.innerText = usuario.rol || "";
+        const n = document.getElementById("userName");
+        const r = document.getElementById("userRol");
+        if (n && r) {
+          n.innerText = usuario.nombre || "";
+          r.innerText = usuario.rol || "";
           clearInterval(_interval);
         }
       }, 100);
